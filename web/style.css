@@ -1,0 +1,94 @@
+/* Minimal styling for the playlistgen demo player. */
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: system-ui, sans-serif;
+  margin: 0;
+  color: #1c1c1c;
+  background: #fafafa;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+main {
+  flex: 1;
+  max-width: 720px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 5rem;
+}
+
+h1 { font-size: 1.4rem; }
+
+#prompt-form {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+#prompt {
+  flex: 1;
+  min-width: 240px;
+  padding: 0.5rem 0.7rem;
+  font-size: 1rem;
+  border: 1px solid #bbb;
+  border-radius: 4px;
+}
+
+button {
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+#status { color: #555; }
+#status.error { color: #b00020; }
+
+#interpretation {
+  margin: 1rem 0;
+  font-size: 0.9rem;
+  color: #444;
+}
+#interpretation .note { color: #777; font-style: italic; }
+
+#results {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0;
+}
+
+#results li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid #e5e5e5;
+  cursor: pointer;
+}
+
+#results li:hover { background: #f0f0f0; }
+#results li.playing { background: #e3efe3; font-weight: 600; }
+#results li.broken { color: #aaa; text-decoration: line-through; cursor: default; }
+
+#results .meta {
+  color: #777;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border-top: 1px solid #ddd;
+  padding: 0.5rem;
+  display: flex;
+  justify-content: center;
+}
+
+#player { width: min(700px, 95vw); }

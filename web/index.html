@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>playlistgen</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <main>
+    <h1>playlistgen</h1>
+
+    <form id="prompt-form">
+      <input id="prompt" type="text" autocomplete="off"
+             placeholder="tropical beach sunset, laid-back, steel drums" required>
+      <label><input id="use-llm" type="checkbox" checked> use LLM</label>
+      <button id="generate" type="submit">Generate</button>
+    </form>
+
+    <p id="status" hidden></p>
+
+    <details id="interpretation" hidden>
+      <summary>how this was interpreted</summary>
+      <div id="interpretation-body"></div>
+    </details>
+
+    <ol id="results"></ol>
+  </main>
+
+  <footer>
+    <audio id="player" controls></audio>
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

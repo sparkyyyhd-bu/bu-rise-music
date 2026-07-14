@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "playlistgen"
+version = "0.1.0"
+description = "Text-to-playlist generation over MTG-Jamendo using LAION-CLAP retrieval and OpenAI query expansion"
+readme = "README.md"
+requires-python = ">=3.10,<3.12"
+dependencies = [
+    "numpy>=1.24,<2",           # laion-clap is not numpy-2 clean
+    "torch>=2.1",
+    "torchaudio",
+    "laion-clap>=1.1.6",
+    # laion-clap imports these but doesn't declare them:
+    "torchvision",
+    "h5py",
+    "tqdm",
+    "transformers<4.50",        # newer versions break laion-clap's RoBERTa loading
+    "openai>=1.68",
+    "python-dotenv>=1.0",
+    "pandas>=2.0",
+    "pyarrow>=14",
+    "librosa>=0.10",
+    "soundfile>=0.12",
+    "rich>=13",
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+    "pydantic>=2.6",
+    "pyyaml>=6",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "httpx>=0.27"]
+
+[project.scripts]
+playlistgen = "playlistgen.cli:main"
+playlistgen-web = "playlistgen.serve:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "clap: tests that load the real CLAP checkpoint (slow, needs download); deselect with -m 'not clap'",
+]

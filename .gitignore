@@ -1,0 +1,17 @@
+.venv/
+.pytest_cache/
+**/__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Downloaded/model-generated artifacts (reproducible; do not commit).
+checkpoints/
+data/jamendo/
+data/mtg-jamendo-dataset/
+data/shards/
+index/
+logs/
+
+# Local configuration and credentials.
+.env
+.DS_Store

@@ -1,0 +1,46 @@
+#!/bin/bash -l
+# SGE array job: CLAP audio embedding on the BU SCC, one task per shard.
+#
+# Environment: BU Shared Computing Cluster (SGE / qsub). Before submitting,
+# on the LOGIN node (compute nodes have no internet):
+#   1. scripts/download_jamendo.sh                       # audio + metadata -> scratch
+#   2. python -c "from playlistgen.config import load_config; \
+#                 from playlistgen.clap_model import ensure_checkpoint; \
+#                 ensure_checkpoint(load_config())"      # CLAP checkpoint
+#   3. N=$(python scripts/embed_audio.py --num-shards)   # shard count
+#   4. qsub -t 1-$N scripts/embed_audio.qsub
+#
+# Point paths at scratch with PLAYLISTGEN_PATHS_* env vars (see -v below or
+# export them in your shell profile). Tasks that already produced their shard
+# are skipped, so re-submitting after failures is safe.
+#
+# ---- SGE directives --------------------------------------------------------
+#$ -N clap_embed
+#$ -j y
+#$ -o logs/
+#$ -l h_rt=08:00:00
+#$ -pe omp 4
+#$ -l gpus=1
+#$ -l gpu_c=6.0
+# Uncomment and edit to forward scratch paths to the job:
+##$ -v PLAYLISTGEN_PATHS_AUDIO_DIR=/scratch/youruser/jamendo/audio
+##$ -v PLAYLISTGEN_PATHS_SHARDS_DIR=/scratch/youruser/playlistgen/shards
+# ----------------------------------------------------------------------------
+
+set -euo pipefail
+mkdir -p logs
+
+# Adjust module names to whatever `module avail python3 cuda` shows on the SCC.
+module load python3/3.10.12 2>/dev/null || true
+module load cuda 2>/dev/null || true
+
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$REPO_ROOT"
+
+# Use the project venv if present (create on the login node with:
+#   python3 -m venv .venv && .venv/bin/pip install -e .)
+PYTHON="$REPO_ROOT/.venv/bin/python"
+[ -x "$PYTHON" ] || PYTHON=python3
+
+echo "task $SGE_TASK_ID on $(hostname), python=$PYTHON"
+exec "$PYTHON" scripts/embed_audio.py   # shard = $SGE_TASK_ID - 1
