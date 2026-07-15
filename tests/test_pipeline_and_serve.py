@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
-from playlistgen.pipeline import generate_playlist
+from playlistgen.pipeline import InadequateIndexError, generate_playlist
 from playlistgen.expand import MissingAPIKeyError
 
 from .helpers import FakeEncoder, basis, make_index
@@ -40,6 +40,13 @@ def test_generate_playlist_missing_key_raises(monkeypatch):
     index = make_index(5)
     with pytest.raises(MissingAPIKeyError):
         generate_playlist("x", 3, CFG, index, FakeEncoder(), use_llm=True)
+
+
+def test_large_playlist_rejects_smoke_index():
+    index = make_index(10)
+    index.tracks["artist"] = "only artist"
+    with pytest.raises(InadequateIndexError, match="smoke sample"):
+        generate_playlist("rainy", 10, CFG, index, FakeEncoder(), use_llm=False)
 
 
 def test_generate_playlist_with_fake_llm():

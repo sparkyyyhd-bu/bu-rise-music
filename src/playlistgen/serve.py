@@ -24,7 +24,7 @@ from pydantic import BaseModel, Field
 from .clap_model import ClapEncoder
 from .config import load_config
 from .expand import MissingAPIKeyError
-from .pipeline import generate_playlist
+from .pipeline import InadequateIndexError, generate_playlist
 from .retrieve import PlaylistIndex
 
 WEB_DIR = Path(__file__).resolve().parents[2] / "web"
@@ -62,6 +62,8 @@ def create_app(config_path: str | None = None) -> FastAPI:
             )
         except MissingAPIKeyError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
+        except InadequateIndexError as exc:
+            raise HTTPException(status_code=422, detail=str(exc))
 
     return app
 

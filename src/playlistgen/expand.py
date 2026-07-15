@@ -93,7 +93,10 @@ Instrument vocabulary: {instruments}
 
 def _vocab_lists(vocab: dict[str, Any] | None) -> tuple[list[str], list[str], list[str]]:
     """Prefer the index's own vocab.json; fall back to the bundled lists."""
-    if vocab and vocab.get("genres"):
+    # An index may intentionally cover only one tag category, such as the
+    # official Jamendo mood/theme subset. Empty lists are meaningful and must
+    # not trigger the bundled full-dataset vocabulary fallback.
+    if vocab is not None and all(k in vocab for k in ("genres", "moods", "instruments")):
         return vocab["genres"], vocab["moods"], vocab["instruments"]
     return jamendo_vocab.GENRES, jamendo_vocab.MOODS, jamendo_vocab.INSTRUMENTS
 

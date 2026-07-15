@@ -3,7 +3,7 @@
 import numpy as np
 
 from playlistgen.expand import ExpandedQuery
-from playlistgen.rerank import rerank
+from playlistgen.rerank import Candidate, diversify_artists, rerank
 from playlistgen.retrieve import cosine_top_n
 from playlistgen.sequence import sequence_playlist
 
@@ -47,6 +47,16 @@ def test_rerank_without_constraints_is_cosine_order():
     out = rerank(rows, cosines, index, None, alpha=0.7, beta=0.3)
     assert [c.row for c in out] == [5, 2, 4]
     assert all(c.tag_overlap == 0.0 for c in out)
+
+
+def test_rerank_enforces_explicit_genre_when_enough_tracks_match():
+    index = make_index(10)
+    rows = np.arange(10)
+    cosines = np.linspace(1.0, 0.1, 10).astype(np.float32)
+    q = ExpandedQuery(captions=["x"], genres=["techno"])
+    out = rerank(rows, cosines, index, q, alpha=0.7, beta=0.3, keep_at_least=4)
+    assert len(out) == 5
+    assert all("techno" in index.tracks.iloc[c.row]["genres"] for c in out)
 
 
 def test_rerank_instrumental_filter_drops_voice_tracks():
@@ -108,3 +118,17 @@ def test_sequence_follows_embedding_neighbors():
     ]
     out = sequence_playlist(pool, index, length=5)
     assert [c.row for c in out] == [0, 1, 2, 3, 4]
+
+
+def test_diversify_artists_caps_repetition():
+    index = make_index(6)
+    index.tracks.loc[[0, 1, 2, 3], "artist"] = "same artist"
+    pool = [
+        Candidate(row=r, cosine=1 - r / 10, tag_overlap=0, combined=1 - r / 10,
+                  matched_tags=[])
+        for r in range(6)
+    ]
+    out = diversify_artists(pool, index, length=4, max_per_artist=2)
+    artists = [index.tracks.iloc[c.row]["artist"] for c in out]
+    assert artists.count("same artist") == 2
+    assert len(out) == 4

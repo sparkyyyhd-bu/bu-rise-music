@@ -76,6 +76,21 @@ def rerank(
             )
         )
 
+    # Treat explicit category constraints as requirements when the retrieved
+    # pool contains enough matches. A generic overlap bonus alone can allow a
+    # conflicting genre to rank highly because it shares one mood tag.
+    if query is not None and beta > 0:
+        for field in ("genres", "moods", "instruments"):
+            wanted_tags = set(getattr(query, field))
+            if not wanted_tags:
+                continue
+            matching = [
+                c for c in candidates
+                if wanted_tags & set(index.tracks.iloc[c.row][field])
+            ]
+            if len(matching) >= keep_at_least:
+                candidates = matching
+
     # Vocal/instrumental filter on the `voice` instrument tag (see docstring).
     if vocals != "either":
         def has_voice(c: Candidate) -> bool:
@@ -87,3 +102,37 @@ def rerank(
 
     candidates.sort(key=lambda c: c.combined, reverse=True)
     return candidates
+
+
+def diversify_artists(
+    candidates: list[Candidate],
+    index: PlaylistIndex,
+    length: int,
+    max_per_artist: int = 2,
+) -> list[Candidate]:
+    """Select relevant candidates while limiting repeated artists.
+
+    The cap is relaxed only when it is necessary to fill the requested
+    playlist. This keeps a prolific artist from occupying most of the list
+    without returning fewer tracks on legitimately small catalogs.
+    """
+    if length <= 0:
+        return []
+    max_per_artist = max(1, max_per_artist)
+    selected: list[Candidate] = []
+    deferred: list[Candidate] = []
+    counts: dict[str, int] = {}
+    for candidate in candidates:
+        artist = str(index.tracks.iloc[candidate.row]["artist"]).strip().casefold()
+        if counts.get(artist, 0) < max_per_artist:
+            selected.append(candidate)
+            counts[artist] = counts.get(artist, 0) + 1
+        else:
+            deferred.append(candidate)
+        if len(selected) == length:
+            return selected
+
+    # Preserve score order when the catalog cannot satisfy the cap.
+    selected.extend(deferred[: length - len(selected)])
+    selected.sort(key=lambda c: c.combined, reverse=True)
+    return selected[:length]

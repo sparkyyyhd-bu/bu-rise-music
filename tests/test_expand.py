@@ -99,6 +99,17 @@ def test_index_vocab_preferred_over_bundled():
     assert "zzz" in client.calls[0]["instructions"]
 
 
+def test_category_specific_index_preserves_empty_vocabularies():
+    vocab = {"genres": [], "moods": ["calm"], "instruments": []}
+    client = FakeClient(dict(GOOD, genres=[], moods=["calm"], instruments=[]))
+    q = expand_query("rainy", CFG, vocab=vocab, client=client)
+    assert q.genres == []
+    assert q.moods == ["calm"]
+    assert q.instruments == []
+    assert "Genre vocabulary: \n" in client.calls[0]["instructions"]
+    assert "Instrument vocabulary: \n" in client.calls[0]["instructions"]
+
+
 def test_raw_prompt_mode():
     q = ExpandedQuery.from_raw_prompt("lofi beats")
     assert q.captions == ["lofi beats"]

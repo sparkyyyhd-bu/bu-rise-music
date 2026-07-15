@@ -34,7 +34,10 @@ mkdir -p logs
 module load python3/3.10.12 2>/dev/null || true
 module load cuda 2>/dev/null || true
 
-REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# SGE executes a spooled copy of this script, so $0 points under /var/spool
+# rather than at the repository. SGE_O_WORKDIR is the directory from which
+# qsub was invoked and is the reliable repository location here.
+REPO_ROOT="${SGE_O_WORKDIR:-$(cd "$(dirname "$0")/.." && pwd)}"
 cd "$REPO_ROOT"
 
 # Use the project venv if present (create on the login node with:

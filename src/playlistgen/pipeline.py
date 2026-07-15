@@ -11,11 +11,35 @@ from typing import Any
 
 from .clap_model import ClapEncoder, l2_normalize
 from .expand import ExpandedQuery, ExpansionError, MissingAPIKeyError, expand_query
-from .rerank import rerank
+from .rerank import diversify_artists, rerank
 from .retrieve import PlaylistIndex, cosine_top_n
 from .sequence import sequence_playlist
 
 log = logging.getLogger(__name__)
+
+
+class InadequateIndexError(RuntimeError):
+    """The loaded index is a smoke sample, not a usable music catalog."""
+
+
+def validate_index(index: PlaylistIndex, requested_length: int) -> None:
+    """Fail clearly when a tiny smoke index would yield misleading results."""
+    artists = index.tracks["artist"].fillna("").astype(str).str.strip().nunique()
+    tags = {
+        tag
+        for field in ("genres", "moods", "instruments")
+        for values in index.tracks[field]
+        for tag in values
+    }
+    # Five artists and four searchable tags is deliberately a low bar. It
+    # catches a tiny smoke artifact while supporting category-specific indexes.
+    if requested_length >= 10 and (artists < 5 or len(tags) < 4):
+        raise InadequateIndexError(
+            f"The loaded index is only a smoke sample ({len(index)} tracks, "
+            f"{artists} artists, {len(tags)} searchable tags), so it cannot match varied "
+            "playlist prompts. Download a representative Jamendo audio set, "
+            "embed it without --limit, and rebuild the index."
+        )
 
 
 def generate_playlist(
@@ -33,6 +57,7 @@ def generate_playlist(
     (the caller decides how to surface that); any other expansion failure
     falls back to raw-prompt mode with a note.
     """
+    validate_index(index, n)
     notes: list[str] = []
     if use_llm:
         try:
@@ -63,6 +88,8 @@ def generate_playlist(
         beta=float(cfg["retrieval"]["beta"]),
         keep_at_least=n,
     )
+    max_per_artist = int(cfg["retrieval"].get("max_tracks_per_artist", 2))
+    candidates = diversify_artists(candidates, index, n, max_per_artist)
     if query.bpm_range is not None:
         notes.append(
             "bpm_range is advisory only: Jamendo metadata has no tempo, so no "
