@@ -47,6 +47,8 @@ retrieval:
   top_n: 200             # candidates retrieved by cosine before re-ranking
   alpha: 0.7             # weight on CLAP cosine similarity
   beta: 0.3              # weight on tag-overlap (Jaccard) score
+  gamma: 0.3              # weight on artist mainstream_score, only applied when the
+                          # "prefer mainstream artists" preference is requested
   max_tracks_per_artist: 2 # relaxed only when needed to fill a small catalog
 
 expansion:

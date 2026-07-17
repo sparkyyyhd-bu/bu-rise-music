@@ -10,10 +10,16 @@ after all embed_audio.py shards have finished:
 Outputs (row i of tracks.parquet describes row i of embeddings.npy):
 - embeddings.npy   float32 (N, 512), L2-normalized track vectors
 - tracks.parquet   track_id, artist, title, duration, stream_url,
-                   genres, moods, instruments, path
+                   genres, moods, instruments, path, mainstream_score
 - vocab.json       tag vocabulary actually present in the index (used to
                    constrain LLM query expansion)
 - skipped.json     tracks that failed to embed, with reasons
+
+If index/artist_popularity.json exists (written by scripts/fetch_popularity.py),
+each track's artist_id is used to look up a "mainstream_score" in [0, 1],
+which powers the "prefer mainstream artists" ranking preference. Run
+fetch_popularity.py before this script to populate it; otherwise every track
+gets mainstream_score=0.0 and that preference is a no-op.
 """
 
 from __future__ import annotations
@@ -64,6 +70,18 @@ def main() -> None:
         attach_names(tracks, raw_meta)
     by_id = {t.track_id: t for t in tracks}
 
+    popularity_path = Path(cfg["paths"]["index_dir"]) / "artist_popularity.json"
+    if popularity_path.exists():
+        raw_popularity = json.loads(popularity_path.read_text())
+        popularity: dict[int, float] = {int(k): v for k, v in raw_popularity.items()}
+        log.info("loaded mainstream_score for %d artists from %s", len(popularity), popularity_path)
+    else:
+        popularity = {}
+        log.warning(
+            "%s not found; mainstream_score will be 0.0 for every track "
+            "(run scripts/fetch_popularity.py to populate it)", popularity_path,
+        )
+
     blocks: list[np.ndarray] = []
     rows: list[dict] = []
     skipped: list[dict] = []
@@ -93,6 +111,7 @@ def main() -> None:
                     "genres": t.genres,
                     "moods": t.moods,
                     "instruments": t.instruments,
+                    "mainstream_score": popularity.get(t.artist_id, 0.0),
                 }
             )
 

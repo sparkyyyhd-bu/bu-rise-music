@@ -40,6 +40,30 @@ def test_rerank_tag_overlap_boosts_matching_tracks():
     assert out[0].row == 0
 
 
+def test_rerank_mainstream_score_boosts_popular_artist():
+    index = make_index(10)
+    index.tracks["mainstream_score"] = 0.0
+    index.tracks.loc[1, "mainstream_score"] = 1.0  # row 1 is the "mainstream" artist
+    rows = np.array([0, 1])
+    cosines = np.array([0.50, 0.49], dtype=np.float32)
+
+    # gamma=0: near-equal cosine keeps row 0 on top.
+    out = rerank(rows, cosines, index, None, alpha=1.0, beta=0.0, gamma=0.0)
+    assert out[0].row == 0
+
+    # gamma>0: the mainstream_score bonus outweighs the 0.01 cosine deficit.
+    out = rerank(rows, cosines, index, None, alpha=1.0, beta=0.0, gamma=0.5)
+    assert out[0].row == 1
+
+
+def test_rerank_mainstream_score_defaults_to_zero_when_column_missing():
+    index = make_index(10)  # no mainstream_score column
+    rows = np.array([0, 1])
+    cosines = np.array([0.50, 0.49], dtype=np.float32)
+    out = rerank(rows, cosines, index, None, alpha=1.0, beta=0.0, gamma=0.9)
+    assert out[0].row == 0, "gamma should be a no-op without a mainstream_score column"
+
+
 def test_rerank_without_constraints_is_cosine_order():
     index = make_index(6)
     rows = np.array([5, 2, 4])

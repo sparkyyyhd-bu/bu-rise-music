@@ -49,6 +49,7 @@ def generate_playlist(
     index: PlaylistIndex,
     encoder: ClapEncoder,
     use_llm: bool = True,
+    prefer_mainstream: bool = False,
     expansion_client: Any = None,
 ) -> dict[str, Any]:
     """Run the whole pipeline and return a JSON-serializable result dict.
@@ -59,6 +60,11 @@ def generate_playlist(
     """
     validate_index(index, n)
     notes: list[str] = []
+    if prefer_mainstream and "mainstream_score" not in index.tracks.columns:
+        notes.append(
+            "prefer_mainstream was requested, but this index has no popularity data "
+            "(run scripts/fetch_popularity.py then rebuild the index); ranking was unaffected."
+        )
     if use_llm:
         try:
             query = expand_query(prompt, cfg, vocab=index.vocab, client=expansion_client)
@@ -79,6 +85,7 @@ def generate_playlist(
     rows, cosines = cosine_top_n(query_vec, index, top_n)
 
     constraints = query if query.source == "llm" else None
+    gamma = float(cfg["retrieval"].get("gamma", 0.0)) if prefer_mainstream else 0.0
     candidates = rerank(
         rows,
         cosines,
@@ -86,6 +93,7 @@ def generate_playlist(
         constraints,
         alpha=float(cfg["retrieval"]["alpha"]),
         beta=float(cfg["retrieval"]["beta"]),
+        gamma=gamma,
         keep_at_least=n,
     )
     max_per_artist = int(cfg["retrieval"].get("max_tracks_per_artist", 2))

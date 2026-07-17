@@ -2,12 +2,18 @@
 
 Environment: Mac (query side) and SCC.
 
-combined = alpha * cosine + beta * tag_jaccard
+combined = alpha * cosine + beta * tag_jaccard + gamma * mainstream_score
 
 where tag_jaccard is the Jaccard overlap between the expanded query's
 constraint tags (genres + moods + instruments) and the track's Jamendo tags.
 With no constraints (e.g. --no-llm) the tag term is 0 for every track and the
 ranking reduces to pure cosine order.
+
+mainstream_score is a per-artist popularity ranking in [0, 1] fetched from
+the live Jamendo API by scripts/fetch_popularity.py (see jamendo_api.py);
+gamma is 0 unless the caller opts into the "prefer mainstream artists"
+preference, and the term is 0 for every track if the index predates that
+enrichment step (no mainstream_score column).
 
 Vocal/instrumental: Jamendo has no explicit vocal/instrumental flag; the
 `voice` instrument tag is the best available proxy. `instrumental` drops
@@ -52,6 +58,7 @@ def rerank(
     query: ExpandedQuery | None,
     alpha: float,
     beta: float,
+    gamma: float = 0.0,
     keep_at_least: int = 1,
 ) -> list[Candidate]:
     """Score and sort retrieved candidates against the structured constraints."""
@@ -61,17 +68,20 @@ def rerank(
         constraint_tags = set(query.genres) | set(query.moods) | set(query.instruments)
         vocals = query.vocals
 
+    has_mainstream_score = "mainstream_score" in index.tracks.columns
+
     candidates: list[Candidate] = []
     for row, cos in zip(rows.tolist(), cosines.tolist()):
         t = index.tracks.iloc[row]
         track_tags = set(t["genres"]) | set(t["moods"]) | set(t["instruments"])
         overlap = _jaccard(constraint_tags, track_tags)
+        mainstream = float(t["mainstream_score"]) if has_mainstream_score else 0.0
         candidates.append(
             Candidate(
                 row=row,
                 cosine=float(cos),
                 tag_overlap=overlap,
-                combined=alpha * float(cos) + beta * overlap,
+                combined=alpha * float(cos) + beta * overlap + gamma * mainstream,
                 matched_tags=sorted(constraint_tags & track_tags),
             )
         )

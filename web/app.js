@@ -5,6 +5,7 @@
 const form = document.getElementById("prompt-form");
 const promptInput = document.getElementById("prompt");
 const useLlm = document.getElementById("use-llm");
+const preferMainstream = document.getElementById("prefer-mainstream");
 const generateBtn = document.getElementById("generate");
 const statusEl = document.getElementById("status");
 const resultsEl = document.getElementById("results");
@@ -109,7 +110,12 @@ form.addEventListener("submit", async (e) => {
     const resp = await fetch("/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: promptInput.value, n: 20, use_llm: useLlm.checked }),
+      body: JSON.stringify({
+        prompt: promptInput.value,
+        n: 20,
+        use_llm: useLlm.checked,
+        prefer_mainstream: preferMainstream.checked,
+      }),
     });
     const contentType = resp.headers.get("content-type") || "";
     const body = contentType.includes("application/json")

@@ -7,6 +7,7 @@ text encoder plus the saved index -- no cluster required.
     playlistgen "focus music" --no-llm            # offline / ablation mode
     playlistgen "rainy jazz" --explain            # show captions + constraints
     playlistgen "synthwave night drive" --json    # machine-readable dump
+    playlistgen "road trip" --mainstream           # bias toward popular artists
 """
 
 from __future__ import annotations
@@ -54,6 +55,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("-n", type=int, default=20, help="playlist length (default 20)")
     ap.add_argument("--no-llm", action="store_true",
                     help="skip OpenAI query expansion; embed the raw prompt (offline/ablation)")
+    ap.add_argument("--mainstream", action="store_true",
+                    help="bias ranking toward mainstream (higher-popularity) artists "
+                         "(needs an index built with scripts/fetch_popularity.py)")
     ap.add_argument("--explain", action="store_true",
                     help="print the expanded captions and constraints used")
     ap.add_argument("--json", action="store_true", dest="as_json",
@@ -73,7 +77,8 @@ def main(argv: list[str] | None = None) -> int:
     encoder = ClapEncoder(cfg)
     try:
         result = generate_playlist(
-            args.prompt, args.n, cfg, index, encoder, use_llm=not args.no_llm
+            args.prompt, args.n, cfg, index, encoder,
+            use_llm=not args.no_llm, prefer_mainstream=args.mainstream,
         )
     except MissingAPIKeyError as exc:
         console.print(f"[red]{exc}[/red]")

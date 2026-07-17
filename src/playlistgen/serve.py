@@ -7,7 +7,8 @@ this is a demo surface, not a product. Start with:
 
 Routes:
     GET  /          -> web/index.html (plus /static/app.js, /static/style.css)
-    POST /generate  -> {"prompt": str, "n": int, "use_llm": bool}
+    POST /generate  -> {"prompt": str, "n": int, "use_llm": bool,
+                        "prefer_mainstream": bool}
                        runs the exact same pipeline as the CLI (imported from
                        playlistgen.pipeline -- zero duplicated logic).
 """
@@ -34,6 +35,7 @@ class GenerateRequest(BaseModel):
     prompt: str = Field(min_length=1)
     n: int = Field(default=20, ge=1, le=100)
     use_llm: bool = True
+    prefer_mainstream: bool = False
 
 
 def create_app(config_path: str | None = None) -> FastAPI:
@@ -59,6 +61,7 @@ def create_app(config_path: str | None = None) -> FastAPI:
                 app.state.index,
                 app.state.encoder,
                 use_llm=req.use_llm,
+                prefer_mainstream=req.prefer_mainstream,
             )
         except MissingAPIKeyError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
