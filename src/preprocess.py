@@ -32,8 +32,8 @@ class AudioDataset(Dataset):
             return None, None, None
         return waveform, sample_rate, output_name
 
-preview_dir = f"/scratch/{os.environ['USER']}/previews"
-output_directory = os.path.join("/scratch",os.environ["USER"],"mel_spectrograms")
+preview_dir = f"/net/scc1/scratch/{os.environ['USER']}/previews"
+output_directory = os.path.join("/net/scc1/scratch", os.environ["USER"], "mel_spectrograms")
 os.makedirs(output_directory, exist_ok=True)
 
 dataset = AudioDataset(preview_dir, output_directory)
