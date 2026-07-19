@@ -13,6 +13,8 @@ os.makedirs(output_dir, exist_ok = True)
 
 for filename in filenames:
     mel_spec_db = torch.load(os.path.join(src_dir, filename))
+    if mel_spec_db.dim() == 3:
+        mel_spec_db = mel_spec_db.mean(dim=0)
     output_name = os.path.splitext(filename)[0]
     plt.figure(figsize=(10,4))
     plt.imshow(mel_spec_db.numpy(), cmap='magma', aspect='auto')
