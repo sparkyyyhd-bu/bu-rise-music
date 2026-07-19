@@ -9,9 +9,16 @@ preview_path = os.path.join(f"/scratch/{os.environ['USER']}", "previews")
 os.makedirs(preview_path, exist_ok=True)
 
 for index, url in sample["preview_url"].items():
-    response = requests.get(url)
-    response.raise_for_status()
     track_id = df["id"][index]
-    with open(os.path.join(preview_path, f"{track_id}.mp3"), "wb") as f:
+    out_path = os.path.join(preview_path, f"{track_id}.mp3")
+    if os.path.exists(out_path):
+        continue
+    try:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        print(f"skipping {track_id}: {e}")
+        continue
+    with open(out_path, "wb") as f:
         f.write(response.content)
 
