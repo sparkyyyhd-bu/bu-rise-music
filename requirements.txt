@@ -6,3 +6,4 @@ torch
 torchvision
 torchmetrics
 torchaudio
+torchcodec
