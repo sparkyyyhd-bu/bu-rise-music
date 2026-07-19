@@ -1,6 +1,6 @@
 #!/bin/bash -l
 
-#$ -P spclpgm          # project
+#$ -P rise-grid          # project
 #$ -N preprocess        # job name
 #$ -j y                 # merge stdout/stderr
 #$ -o preprocess.qlog   # output log
