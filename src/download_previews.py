@@ -19,6 +19,8 @@ for index, url in sample["preview_url"].items():
     except requests.exceptions.RequestException as e:
         print(f"skipping {track_id}: {e}")
         continue
-    with open(out_path, "wb") as f:
+    tmp_path = out_path + ".tmp"
+    with open(tmp_path, "wb") as f:
         f.write(response.content)
+    os.replace(tmp_path, out_path)
 
