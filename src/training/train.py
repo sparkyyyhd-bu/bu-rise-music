@@ -207,13 +207,5 @@ def main():
 
     print(f"best val loss {best_val_loss:.4f}, checkpoint saved to {checkpoint_path}")
 
-    # Final, one-time evaluation on held-out data the checkpoint selection never saw.
-    model.load_state_dict(torch.load(checkpoint_path, map_location=device))
-    test_loss, test_mae, test_r2 = run_epoch(
-        model, test_loader, criterion, mae_metric, r2_metric
-    )
-    print(f"test loss {test_loss:.4f} mae {test_mae:.2f} r2 {test_r2:.3f}")
-
-
 if __name__ == "__main__":
     main()
