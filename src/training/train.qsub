@@ -11,9 +11,10 @@
 #$ -l gpu_type=H200      # request a specific GPU model, see `qgpus` for options
 
 module load python3/3.10.12
-module load pytorch/1.13.1  # provides torch/torchvision/torchaudio + matching CUDA, avoids per-job pip install of multi-GB nvidia/triton wheels
+module load cuda/12.2   # CUDA runtime matching the pip PyTorch build below, needed for H200 (sm_90)
 
 cd "$SGE_O_WORKDIR"
+pip install --user torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121  # pip build supports sm_90 (H200); module pytorch/1.13.1 tops out at sm_86
 pip install --user -r requirements.txt
 
 python src/training/train.py
