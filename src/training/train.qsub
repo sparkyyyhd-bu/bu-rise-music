@@ -8,7 +8,7 @@
 #$ -pe omp 8             # CPU cores, matches num_workers in train.py
 #$ -l gpus=1             # request 1 GPU
 #$ -l gpu_c=7.0          # min GPU compute capability
-#$ -l gpu_type=A100      # request a specific GPU model, see `qgpus` for options
+#$ -l gpu_type=H200      # request a specific GPU model, see `qgpus` for options
 
 module load python3/3.10.12
 module load pytorch/1.13.1  # provides torch/torchvision/torchaudio + matching CUDA, avoids per-job pip install of multi-GB nvidia/triton wheels
