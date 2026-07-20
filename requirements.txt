@@ -5,4 +5,4 @@ ipython
 torch
 torchvision
 torchaudio
-torchmetrics==0.11.4
+torchmetrics
