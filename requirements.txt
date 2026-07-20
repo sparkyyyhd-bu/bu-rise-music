@@ -2,8 +2,4 @@ pandas
 requests
 kagglehub
 ipython
-torch
-torchvision
-torchmetrics
-torchaudio
-torchcodec
+torchmetrics==0.11.4

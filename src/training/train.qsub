@@ -11,7 +11,7 @@
 #$ -l gpu_type=A100      # request a specific GPU model, see `qgpus` for options
 
 module load python3/3.10.12
-module load cuda/12.2
+module load pytorch/1.13.1  # provides torch/torchvision/torchaudio + matching CUDA, avoids per-job pip install of multi-GB nvidia/triton wheels
 
 cd "$SGE_O_WORKDIR"
 pip install --user -r requirements.txt
