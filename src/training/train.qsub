@@ -11,10 +11,19 @@
 #$ -l gpu_type=H200      # request a specific GPU model, see `qgpus` for options
 
 module load python3/3.10.12
-module load cuda/12.2   # CUDA runtime matching the pip PyTorch build below, needed for H200 (sm_90)
+module load cuda/12.2
 
 cd "$SGE_O_WORKDIR"
-pip install --user torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121  # pip build supports sm_90 (H200); module pytorch/1.13.1 tops out at sm_86
-pip install --user -r requirements.txt
+
+# Needs modern torch (H200 = sm_90), which the cluster's pytorch module (tops out at 1.13.1)
+# can't provide. Torch wheels are several GB, so install into a venv on scratch instead of
+# the small home-directory quota (same pattern as preprocess.qsub).
+VENV_DIR="/net/scc1/scratch/$USER/venv-train"
+if [ ! -d "$VENV_DIR" ]; then
+    python3 -m venv "$VENV_DIR"
+fi
+source "$VENV_DIR/bin/activate"
+pip install torch torchvision torchaudio
+pip install -r requirements.txt
 
 python src/training/train.py
