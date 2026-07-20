@@ -1,4 +1,5 @@
 import os
+import subprocess
 
 import pandas as pd
 import torch
@@ -13,12 +14,32 @@ else:
     device = torch.device("cpu")
 
 repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-mel_dir = os.path.join("/net/scc1/scratch", os.environ["USER"], "mel_spectrograms")
+network_mel_dir = os.path.join("/net/scc1/scratch", os.environ["USER"], "mel_spectrograms")
+local_scratch_dir = os.path.join("/scratch", os.environ["USER"])
 tracks_csv = os.path.join(repo_root, "data", "SpotGenTrack", "Data Sources", "spotify_tracks.csv")
 checkpoint_dir = os.path.join("/net/scc1/scratch", os.environ["USER"], "checkpoints")
 os.makedirs(checkpoint_dir, exist_ok=True)
 
 MEL_SUFFIX = "_mel.pt"
+
+
+def sync_to_local_scratch(source_dir, local_root):
+    """Copy source_dir onto the compute node's local scratch disk once, then
+    reuse that copy on subsequent runs so training reads local disk instead
+    of the network-mounted scratch space."""
+    local_dir = os.path.join(local_root, os.path.basename(source_dir.rstrip("/")))
+    done_marker = local_dir + ".sync_complete"
+    if not os.path.exists(done_marker):
+        os.makedirs(local_root, exist_ok=True)
+        subprocess.run(
+            ["rsync", "-a", "--delete", source_dir.rstrip("/") + "/", local_dir + "/"],
+            check=True,
+        )
+        open(done_marker, "w").close()
+    return local_dir
+
+
+mel_dir = sync_to_local_scratch(network_mel_dir, local_scratch_dir)
 
 
 class MelPopularityDataset(Dataset):
