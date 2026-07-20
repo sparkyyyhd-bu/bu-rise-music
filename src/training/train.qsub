@@ -4,7 +4,7 @@
 #$ -N train              # job name
 #$ -j y                  # merge stdout/stderr
 #$ -o train.qlog         # output log
-#$ -l h_rt=12:00:00      # walltime, adjust as needed
+#$ -l h_rt=24:00:00      # walltime, adjust as needed
 #$ -pe omp 8             # CPU cores, matches num_workers in train.py
 #$ -l gpus=1             # request 1 GPU
 #$ -l gpu_c=7.0          # min GPU compute capability

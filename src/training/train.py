@@ -1,7 +1,8 @@
 import os
-import subprocess
+import shutil
 
 import pandas as pd
+from tqdm import tqdm
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -30,11 +31,10 @@ def sync_to_local_scratch(source_dir, local_root):
     local_dir = os.path.join(local_root, os.path.basename(source_dir.rstrip("/")))
     done_marker = local_dir + ".sync_complete"
     if not os.path.exists(done_marker):
-        os.makedirs(local_root, exist_ok=True)
-        subprocess.run(
-            ["rsync", "-a", "--delete", source_dir.rstrip("/") + "/", local_dir + "/"],
-            check=True,
-        )
+        os.makedirs(local_dir, exist_ok=True)
+        filenames = [entry.name for entry in os.scandir(source_dir) if entry.is_file()]
+        for name in tqdm(filenames, desc="syncing mel spectrograms to local scratch"):
+            shutil.copy2(os.path.join(source_dir, name), os.path.join(local_dir, name))
         open(done_marker, "w").close()
     return local_dir
 
