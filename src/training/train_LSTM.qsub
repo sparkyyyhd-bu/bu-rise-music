@@ -26,4 +26,5 @@ source "$VENV_DIR/bin/activate"
 pip install --upgrade pip setuptools
 pip install --upgrade -r requirements.txt
 
+export PYTHONPATH="$SGE_O_WORKDIR/src:$PYTHONPATH"
 python src/training/train_LSTM.py
