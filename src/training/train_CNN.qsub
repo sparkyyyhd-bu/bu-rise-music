@@ -1,0 +1,29 @@
+#!/bin/bash -l
+
+#$ -P rise-grid          # project
+#$ -N train              # job name
+#$ -j y                  # merge stdout/stderr
+#$ -o train_CNN.qlog         # output log
+#$ -l h_rt=24:00:00      # walltime, adjust as needed
+#$ -pe omp 8             # CPU cores, matches num_workers in train.py
+#$ -l gpus=1             # request 1 GPU
+#$ -l gpu_c=7.0          # min GPU compute capability
+#$ -l gpu_type=H200      # request a specific GPU model, see `qgpus` for options
+
+module load python3/3.10.12
+module load cuda/12.2
+
+cd "$SGE_O_WORKDIR"
+
+# Needs modern torch (H200 = sm_90), which the cluster's pytorch module (tops out at 1.13.1)
+# can't provide. Torch wheels are several GB, so install into a venv in project space
+# (persistent, 50GB quota) instead of the small home-directory quota.
+VENV_DIR="$SGE_O_WORKDIR/.venv-train"
+if [ ! -d "$VENV_DIR" ]; then
+    python3 -m venv "$VENV_DIR"
+fi
+source "$VENV_DIR/bin/activate"
+pip install --upgrade pip setuptools
+pip install --upgrade -r requirements.txt
+
+python src/training/train_CNN.py
