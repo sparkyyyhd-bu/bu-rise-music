@@ -122,9 +122,12 @@ def main():
     print(f"loaded {len(dataset)} labeled mel spectrograms")
 
     val_size = max(1, int(0.15 * len(dataset)))
-    train_size = len(dataset) - val_size
-    train_set, val_set = random_split(
-        dataset, [train_size, val_size], generator=torch.Generator().manual_seed(0)
+    test_size = max(1, int(0.15 * len(dataset)))
+    train_size = len(dataset) - val_size - test_size
+    train_set, val_set, test_set = random_split(
+        dataset,
+        [train_size, val_size, test_size],
+        generator=torch.Generator().manual_seed(0),
     )
 
     batch_size = 16
@@ -138,6 +141,14 @@ def main():
     )
     val_loader = DataLoader(
         val_set,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=8,
+        pin_memory=(device.type == "cuda"),
+        collate_fn=collate_fn,
+    )
+    test_loader = DataLoader(
+        test_set,
         batch_size=batch_size,
         shuffle=False,
         num_workers=8,
@@ -174,6 +185,13 @@ def main():
             torch.save(model.state_dict(), checkpoint_path)
 
     print(f"best val loss {best_val_loss:.4f}, checkpoint saved to {checkpoint_path}")
+
+    # Final, one-time evaluation on held-out data the checkpoint selection never saw.
+    model.load_state_dict(torch.load(checkpoint_path, map_location=device))
+    test_loss, test_mae, test_r2 = run_epoch(
+        model, test_loader, criterion, mae_metric, r2_metric
+    )
+    print(f"test loss {test_loss:.4f} mae {test_mae:.2f} r2 {test_r2:.3f}")
 
 
 if __name__ == "__main__":
