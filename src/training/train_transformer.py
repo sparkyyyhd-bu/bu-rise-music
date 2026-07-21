@@ -74,12 +74,16 @@ def run_epoch(model, loader, criterion, mae_metric, r2_metric, optimizer = None)
     return avg_loss, mae_metric.compute().item(), r2_metric.compute().item()
 
 
+def to_max_frames(mel):
+    num_frames = mel.shape[-1]
+    if num_frames < MAX_FRAMES:
+        return F.pad(mel, (0, MAX_FRAMES - num_frames))
+    return mel[..., :MAX_FRAMES]
+
+
 def collate_fn(batch):
     mels, targets = zip(*batch)
-    max_frames = max(mel.shape[-1] for mel in mels)
-    padded = torch.stack(
-        [F.pad(mel, (0, max_frames - mel.shape[-1])) for mel in mels]
-    )
+    padded = torch.stack([to_max_frames(mel) for mel in mels])
     padded = padded.transpose(1, 2)  # (B, time, n_mels)
     targets = torch.stack(targets)
     return padded, targets
