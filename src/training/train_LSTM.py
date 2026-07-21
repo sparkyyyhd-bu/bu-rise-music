@@ -105,14 +105,27 @@ def main():
         collate_fn=collate_fn
     )
     model = PopularityLSTM().to(device)
+    checkpoint_path = os.path.join(checkpoint_dir, "best_LSTM_model.pt")
+    resumed = os.path.exists(checkpoint_path)
+    if resumed:
+        model.load_state_dict(
+            torch.load(checkpoint_path, map_location=device, weights_only=True)
+        )
+        print(f"continuing from {checkpoint_path}", flush=True)
+
     criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
     mae_metric = MeanAbsoluteError().to(device)
     r2_metric = R2Score().to(device)
 
     epochs = 50
-    best_val_loss = float("inf")
-    checkpoint_path = os.path.join(checkpoint_dir, "best_model.pt")
+    if resumed:
+        best_val_loss, _, _ = run_epoch(
+            model, val_loader, criterion, mae_metric, r2_metric
+        )
+        print(f"resumed validation loss: {best_val_loss:.4f}", flush=True)
+    else:
+        best_val_loss = float("inf")
 
 
     for epoch in range(1, epochs + 1):

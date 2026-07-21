@@ -126,7 +126,7 @@ def main():
 
     epochs = 50
     best_val_loss = float("inf")
-    checkpoint_path = os.path.join(checkpoint_dir, "best_model.pt")
+    checkpoint_path = os.path.join(checkpoint_dir, "best_CNN_model.pt")
 
     for epoch in range(1, epochs + 1):
         train_loss, train_mae, train_r2 = run_epoch(
