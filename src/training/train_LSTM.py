@@ -105,30 +105,31 @@ def main():
         collate_fn=collate_fn
     )
     model = PopularityLSTM().to(device)
-    checkpoint_path = os.path.join(checkpoint_dir, "best_LSTM_model.pt")
-    resumed = os.path.exists(checkpoint_path)
-    if resumed:
-        model.load_state_dict(
-            torch.load(checkpoint_path, map_location=device, weights_only=True)
-        )
-        print(f"continuing from {checkpoint_path}", flush=True)
-
     criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
     mae_metric = MeanAbsoluteError().to(device)
     r2_metric = R2Score().to(device)
 
     epochs = 50
-    if resumed:
-        best_val_loss, _, _ = run_epoch(
-            model, val_loader, criterion, mae_metric, r2_metric
+    last_checkpoint_path = os.path.join(checkpoint_dir, "last_LSTM_checkpoint.pt")
+    best_checkpoint_path = os.path.join(checkpoint_dir, "best_LSTM_model.pt")
+    start_epoch = 0
+    best_val_loss = float("inf")
+
+    if os.path.exists(last_checkpoint_path):
+        checkpoint = torch.load(
+            last_checkpoint_path, map_location=device, weights_only=True
         )
-        print(f"resumed validation loss: {best_val_loss:.4f}", flush=True)
-    else:
-        best_val_loss = float("inf")
+        model.load_state_dict(checkpoint["model_state_dict"])
+        optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        start_epoch = checkpoint["epoch"]
+        best_val_loss = checkpoint["best_val_loss"]
+        print(
+            f"continuing from epoch {start_epoch} in {last_checkpoint_path}",
+            flush=True,
+        )
 
-
-    for epoch in range(1, epochs + 1):
+    for epoch in range(start_epoch + 1, start_epoch + epochs + 1):
         train_loss, train_mae, train_r2 = run_epoch(
             model, train_loader, criterion, mae_metric, r2_metric, optimizer
         )
@@ -143,9 +144,24 @@ def main():
 
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            torch.save(model.state_dict(), checkpoint_path)
+            is_best = True
+        else:
+            is_best = False
 
-    print(f"best val loss {best_val_loss:.4f}, checkpoint saved to {checkpoint_path}")
+        checkpoint = {
+            "epoch": epoch,
+            "model_state_dict": model.state_dict(),
+            "optimizer_state_dict": optimizer.state_dict(),
+            "best_val_loss": best_val_loss,
+        }
+        torch.save(checkpoint, last_checkpoint_path)
+        if is_best:
+            torch.save(checkpoint, best_checkpoint_path)
+
+    print(
+        f"finished epoch {epoch}; best val loss {best_val_loss:.4f}; "
+        f"latest checkpoint saved to {last_checkpoint_path}"
+    )
 
 
 if __name__ == "__main__":
