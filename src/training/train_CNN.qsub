@@ -21,10 +21,13 @@ exec >>"$SGE_O_WORKDIR/logs/train_CNN.${JOB_ID}.qlog" \
      2>>"$SGE_O_WORKDIR/logs/train_CNN.${JOB_ID}.err"
 echo "job ${JOB_ID} started on $(hostname) at $(date)"
 
-# Needs modern torch (H200 = sm_90), which the cluster's pytorch module (tops out at 1.13.1)
-# can't provide. Torch wheels are several GB, so install into a venv in project space
-# (persistent, 50GB quota) instead of the small home-directory quota.
-VENV_DIR="$SGE_O_WORKDIR/.venv-train"
+# Needs modern torch, which the cluster's pytorch module (tops out at 1.13.1)
+# can't provide. Keep the large environment and pip cache on persistent project
+# storage, outside the small home-directory quota.
+PROJECT_STORAGE="${PROJECT_STORAGE:-/project/rise-grid/$USER}"
+VENV_DIR="$PROJECT_STORAGE/venvs/bu-rise-train"
+export PIP_CACHE_DIR="$PROJECT_STORAGE/.cache/pip"
+mkdir -p "$(dirname "$VENV_DIR")" "$PIP_CACHE_DIR"
 if [ ! -d "$VENV_DIR" ]; then
     python3 -m venv "$VENV_DIR"
 fi

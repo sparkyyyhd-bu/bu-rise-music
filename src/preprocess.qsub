@@ -17,10 +17,13 @@ module load ffmpeg
 cd "$SGE_O_WORKDIR"
 
 # Needs modern torch/torchaudio + torchcodec (mp3 decoding via the ffmpeg backend),
-# which the cluster's pytorch module (tops out at 1.13.1) can't provide. Those
-# packages are several GB, so install them on scratch instead of the small
-# home-directory quota.
-VENV_DIR="/net/scc1/scratch/$USER/venv-preprocess"
+# which the cluster's pytorch module (tops out at 1.13.1) can't provide. Keep the
+# large environment and pip cache on persistent project storage, outside the
+# small home-directory quota.
+PROJECT_STORAGE="${PROJECT_STORAGE:-/project/rise-grid/$USER}"
+VENV_DIR="$PROJECT_STORAGE/venvs/bu-rise-preprocess"
+export PIP_CACHE_DIR="$PROJECT_STORAGE/.cache/pip"
+mkdir -p "$(dirname "$VENV_DIR")" "$PIP_CACHE_DIR"
 if [ ! -d "$VENV_DIR" ]; then
     python3 -m venv "$VENV_DIR"
 fi
