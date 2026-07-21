@@ -1,9 +1,7 @@
 #!/bin/bash -l
 
 #$ -P rise-grid          # project
-#$ -N train              # job name
-#$ -j y                  # merge stdout/stderr
-#$ -o train_LSTM.qlog         # output log
+#$ -N train_LSTM         # job name
 #$ -l h_rt=24:00:00      # walltime, adjust as needed
 #$ -pe omp 8             # CPU cores, matches num_workers in train.py
 #$ -l gpus=1             # request 1 GPU
@@ -14,6 +12,14 @@ module load python3/3.10.12
 module load cuda/12.2
 
 cd "$SGE_O_WORKDIR"
+
+# Keep unique, persistent logs for every submission. Grid Engine's default
+# train_LSTM.o<job_id>/train_LSTM.e<job_id> files remain as a fallback for any
+# failure that happens before these redirects are established.
+mkdir -p "$SGE_O_WORKDIR/logs"
+exec >>"$SGE_O_WORKDIR/logs/train_LSTM.${JOB_ID}.qlog" \
+     2>>"$SGE_O_WORKDIR/logs/train_LSTM.${JOB_ID}.err"
+echo "job ${JOB_ID} started on $(hostname) at $(date)"
 
 # Needs modern torch (H200 = sm_90), which the cluster's pytorch module (tops out at 1.13.1)
 # can't provide. Torch wheels are several GB, so install into a venv in project space
@@ -27,4 +33,4 @@ pip install --upgrade pip setuptools
 pip install --upgrade -r requirements.txt
 
 export PYTHONPATH="$SGE_O_WORKDIR/src:$PYTHONPATH"
-python src/training/train_LSTM.py
+python -u src/training/train_LSTM.py
