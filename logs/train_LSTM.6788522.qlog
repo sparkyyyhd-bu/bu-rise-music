@@ -1,0 +1,122 @@
+job 6788522 started on scc-504 at Mon Jul 20 23:12:18 EDT 2026
+Requirement already satisfied: pip in ./.venv-train/lib/python3.10/site-packages (26.1.2)
+Requirement already satisfied: setuptools in ./.venv-train/lib/python3.10/site-packages (83.0.0)
+Requirement already satisfied: pandas in ./.venv-train/lib/python3.10/site-packages (from -r requirements.txt (line 1)) (2.3.3)
+Requirement already satisfied: requests in ./.venv-train/lib/python3.10/site-packages (from -r requirements.txt (line 2)) (2.34.2)
+Requirement already satisfied: kagglehub in ./.venv-train/lib/python3.10/site-packages (from -r requirements.txt (line 3)) (1.0.2)
+Requirement already satisfied: ipython in ./.venv-train/lib/python3.10/site-packages (from -r requirements.txt (line 4)) (8.39.0)
+Requirement already satisfied: torch in ./.venv-train/lib/python3.10/site-packages (from -r requirements.txt (line 5)) (2.13.0)
+Requirement already satisfied: torchvision in ./.venv-train/lib/python3.10/site-packages (from -r requirements.txt (line 6)) (0.28.0)
+Requirement already satisfied: torchaudio in ./.venv-train/lib/python3.10/site-packages (from -r requirements.txt (line 7)) (2.11.0)
+Requirement already satisfied: torchmetrics in ./.venv-train/lib/python3.10/site-packages (from -r requirements.txt (line 8)) (1.9.0)
+Requirement already satisfied: tqdm in ./.venv-train/lib/python3.10/site-packages (from -r requirements.txt (line 9)) (4.69.0)
+Requirement already satisfied: numpy>=1.22.4 in ./.venv-train/lib/python3.10/site-packages (from pandas->-r requirements.txt (line 1)) (2.2.6)
+Requirement already satisfied: python-dateutil>=2.8.2 in ./.venv-train/lib/python3.10/site-packages (from pandas->-r requirements.txt (line 1)) (2.9.0.post0)
+Requirement already satisfied: pytz>=2020.1 in ./.venv-train/lib/python3.10/site-packages (from pandas->-r requirements.txt (line 1)) (2026.2)
+Requirement already satisfied: tzdata>=2022.7 in ./.venv-train/lib/python3.10/site-packages (from pandas->-r requirements.txt (line 1)) (2026.3)
+Requirement already satisfied: charset_normalizer<4,>=2 in ./.venv-train/lib/python3.10/site-packages (from requests->-r requirements.txt (line 2)) (3.4.9)
+Requirement already satisfied: idna<4,>=2.5 in ./.venv-train/lib/python3.10/site-packages (from requests->-r requirements.txt (line 2)) (3.18)
+Requirement already satisfied: urllib3<3,>=1.26 in ./.venv-train/lib/python3.10/site-packages (from requests->-r requirements.txt (line 2)) (2.7.0)
+Requirement already satisfied: certifi>=2023.5.7 in ./.venv-train/lib/python3.10/site-packages (from requests->-r requirements.txt (line 2)) (2026.6.17)
+Requirement already satisfied: kagglesdk<1.0,>=0.1.22 in ./.venv-train/lib/python3.10/site-packages (from kagglehub->-r requirements.txt (line 3)) (0.1.28)
+Requirement already satisfied: packaging in ./.venv-train/lib/python3.10/site-packages (from kagglehub->-r requirements.txt (line 3)) (26.2)
+Requirement already satisfied: pyyaml in ./.venv-train/lib/python3.10/site-packages (from kagglehub->-r requirements.txt (line 3)) (6.0.3)
+Requirement already satisfied: protobuf in ./.venv-train/lib/python3.10/site-packages (from kagglesdk<1.0,>=0.1.22->kagglehub->-r requirements.txt (line 3)) (7.35.1)
+Requirement already satisfied: decorator in ./.venv-train/lib/python3.10/site-packages (from ipython->-r requirements.txt (line 4)) (5.3.1)
+Requirement already satisfied: exceptiongroup in ./.venv-train/lib/python3.10/site-packages (from ipython->-r requirements.txt (line 4)) (1.3.1)
+Requirement already satisfied: jedi>=0.16 in ./.venv-train/lib/python3.10/site-packages (from ipython->-r requirements.txt (line 4)) (0.20.0)
+Requirement already satisfied: matplotlib-inline in ./.venv-train/lib/python3.10/site-packages (from ipython->-r requirements.txt (line 4)) (0.2.2)
+Requirement already satisfied: pexpect>4.3 in ./.venv-train/lib/python3.10/site-packages (from ipython->-r requirements.txt (line 4)) (4.9.0)
+Requirement already satisfied: prompt_toolkit<3.1.0,>=3.0.41 in ./.venv-train/lib/python3.10/site-packages (from ipython->-r requirements.txt (line 4)) (3.0.52)
+Requirement already satisfied: pygments>=2.4.0 in ./.venv-train/lib/python3.10/site-packages (from ipython->-r requirements.txt (line 4)) (2.20.0)
+Requirement already satisfied: stack_data in ./.venv-train/lib/python3.10/site-packages (from ipython->-r requirements.txt (line 4)) (0.6.3)
+Requirement already satisfied: traitlets>=5.13.0 in ./.venv-train/lib/python3.10/site-packages (from ipython->-r requirements.txt (line 4)) (5.15.1)
+Requirement already satisfied: typing_extensions>=4.6 in ./.venv-train/lib/python3.10/site-packages (from ipython->-r requirements.txt (line 4)) (4.16.0)
+Requirement already satisfied: wcwidth in ./.venv-train/lib/python3.10/site-packages (from prompt_toolkit<3.1.0,>=3.0.41->ipython->-r requirements.txt (line 4)) (0.8.2)
+Requirement already satisfied: filelock in ./.venv-train/lib/python3.10/site-packages (from torch->-r requirements.txt (line 5)) (3.31.1)
+Requirement already satisfied: setuptools>=77.0.3 in ./.venv-train/lib/python3.10/site-packages (from torch->-r requirements.txt (line 5)) (83.0.0)
+Requirement already satisfied: sympy>=1.13.3 in ./.venv-train/lib/python3.10/site-packages (from torch->-r requirements.txt (line 5)) (1.14.0)
+Requirement already satisfied: networkx>=2.5.1 in ./.venv-train/lib/python3.10/site-packages (from torch->-r requirements.txt (line 5)) (3.4.2)
+Requirement already satisfied: jinja2 in ./.venv-train/lib/python3.10/site-packages (from torch->-r requirements.txt (line 5)) (3.1.6)
+Requirement already satisfied: fsspec>=0.8.5 in ./.venv-train/lib/python3.10/site-packages (from torch->-r requirements.txt (line 5)) (2026.6.0)
+Requirement already satisfied: cuda-toolkit==13.0.3 in ./.venv-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (13.0.3.0)
+Requirement already satisfied: cuda-bindings<14,>=13.0.3 in ./.venv-train/lib/python3.10/site-packages (from torch->-r requirements.txt (line 5)) (13.3.1)
+Requirement already satisfied: nvidia-cudnn-cu13==9.20.0.48 in ./.venv-train/lib/python3.10/site-packages (from torch->-r requirements.txt (line 5)) (9.20.0.48)
+Requirement already satisfied: nvidia-cusparselt-cu13==0.8.1 in ./.venv-train/lib/python3.10/site-packages (from torch->-r requirements.txt (line 5)) (0.8.1)
+Requirement already satisfied: nvidia-nccl-cu13==2.29.7 in ./.venv-train/lib/python3.10/site-packages (from torch->-r requirements.txt (line 5)) (2.29.7)
+Requirement already satisfied: nvidia-nvshmem-cu13==3.4.5 in ./.venv-train/lib/python3.10/site-packages (from torch->-r requirements.txt (line 5)) (3.4.5)
+Requirement already satisfied: triton==3.7.1 in ./.venv-train/lib/python3.10/site-packages (from torch->-r requirements.txt (line 5)) (3.7.1)
+Requirement already satisfied: nvidia-curand==10.4.0.35.* in ./.venv-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (10.4.0.35)
+Requirement already satisfied: nvidia-cuda-cupti==13.0.85.* in ./.venv-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (13.0.85)
+Requirement already satisfied: nvidia-nvjitlink<14,>=13.0.88 in ./.venv-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (13.3.33)
+Requirement already satisfied: nvidia-nvtx==13.0.85.* in ./.venv-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (13.0.85)
+Requirement already satisfied: nvidia-cublas==13.1.1.3.* in ./.venv-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (13.1.1.3)
+Requirement already satisfied: nvidia-cusolver==12.0.4.66.* in ./.venv-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (12.0.4.66)
+Requirement already satisfied: nvidia-cusparse==12.6.3.3.* in ./.venv-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (12.6.3.3)
+Requirement already satisfied: nvidia-cufile==1.15.1.6.* in ./.venv-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (1.15.1.6)
+Requirement already satisfied: nvidia-cuda-nvrtc==13.0.88.* in ./.venv-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (13.0.88)
+Requirement already satisfied: nvidia-cufft==12.0.0.61.* in ./.venv-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (12.0.0.61)
+Requirement already satisfied: nvidia-cuda-runtime==13.0.96.* in ./.venv-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (13.0.96)
+Requirement already satisfied: cuda-pathfinder>=1.4.2 in ./.venv-train/lib/python3.10/site-packages (from cuda-bindings<14,>=13.0.3->torch->-r requirements.txt (line 5)) (1.5.6)
+Requirement already satisfied: pillow!=8.3.*,>=5.3.0 in ./.venv-train/lib/python3.10/site-packages (from torchvision->-r requirements.txt (line 6)) (12.3.0)
+Requirement already satisfied: lightning-utilities>=0.15.3 in ./.venv-train/lib/python3.10/site-packages (from torchmetrics->-r requirements.txt (line 8)) (0.15.3)
+Requirement already satisfied: parso<0.9.0,>=0.8.6 in ./.venv-train/lib/python3.10/site-packages (from jedi>=0.16->ipython->-r requirements.txt (line 4)) (0.8.7)
+Requirement already satisfied: ptyprocess>=0.5 in ./.venv-train/lib/python3.10/site-packages (from pexpect>4.3->ipython->-r requirements.txt (line 4)) (0.7.0)
+Requirement already satisfied: six>=1.5 in ./.venv-train/lib/python3.10/site-packages (from python-dateutil>=2.8.2->pandas->-r requirements.txt (line 1)) (1.17.0)
+Requirement already satisfied: mpmath<1.4,>=1.1.0 in ./.venv-train/lib/python3.10/site-packages (from sympy>=1.13.3->torch->-r requirements.txt (line 5)) (1.3.0)
+Requirement already satisfied: MarkupSafe>=2.0 in ./.venv-train/lib/python3.10/site-packages (from jinja2->torch->-r requirements.txt (line 5)) (3.0.3)
+Requirement already satisfied: executing>=1.2.0 in ./.venv-train/lib/python3.10/site-packages (from stack_data->ipython->-r requirements.txt (line 4)) (2.2.1)
+Requirement already satisfied: asttokens>=2.1.0 in ./.venv-train/lib/python3.10/site-packages (from stack_data->ipython->-r requirements.txt (line 4)) (3.0.2)
+Requirement already satisfied: pure-eval in ./.venv-train/lib/python3.10/site-packages (from stack_data->ipython->-r requirements.txt (line 4)) (0.2.3)
+loaded 101934 labeled mel spectrograms
+epoch 001 | train loss 0.0251 mae 12.79 r2 0.108 | val loss 0.0239 mae 12.47 r2 0.146
+epoch 002 | train loss 0.0234 mae 12.33 r2 0.167 | val loss 0.0228 mae 12.13 r2 0.188
+epoch 003 | train loss 0.0229 mae 12.15 r2 0.189 | val loss 0.0222 mae 12.00 r2 0.207
+epoch 004 | train loss 0.0223 mae 11.99 r2 0.209 | val loss 0.0218 mae 11.84 r2 0.223
+epoch 005 | train loss 0.0221 mae 11.94 r2 0.215 | val loss 0.0217 mae 11.82 r2 0.227
+epoch 006 | train loss 0.0220 mae 11.90 r2 0.219 | val loss 0.0219 mae 11.81 r2 0.220
+epoch 007 | train loss 0.0219 mae 11.87 r2 0.221 | val loss 0.0218 mae 11.82 r2 0.222
+epoch 008 | train loss 0.0219 mae 11.87 r2 0.221 | val loss 0.0224 mae 12.02 r2 0.201
+epoch 009 | train loss 0.0219 mae 11.87 r2 0.222 | val loss 0.0216 mae 11.76 r2 0.231
+epoch 010 | train loss 0.0220 mae 11.88 r2 0.219 | val loss 0.0215 mae 11.75 r2 0.232
+epoch 011 | train loss 0.0220 mae 11.88 r2 0.219 | val loss 0.0221 mae 11.99 r2 0.210
+epoch 012 | train loss 0.0219 mae 11.87 r2 0.221 | val loss 0.0217 mae 11.85 r2 0.226
+epoch 013 | train loss 0.0219 mae 11.87 r2 0.222 | val loss 0.0217 mae 11.82 r2 0.225
+epoch 014 | train loss 0.0220 mae 11.87 r2 0.220 | val loss 0.0216 mae 11.79 r2 0.229
+epoch 015 | train loss 0.0219 mae 11.86 r2 0.222 | val loss 0.0216 mae 11.74 r2 0.229
+epoch 016 | train loss 0.0221 mae 11.92 r2 0.216 | val loss 0.0217 mae 11.84 r2 0.224
+epoch 017 | train loss 0.0219 mae 11.86 r2 0.223 | val loss 0.0216 mae 11.77 r2 0.228
+epoch 018 | train loss 0.0217 mae 11.81 r2 0.228 | val loss 0.0217 mae 11.81 r2 0.225
+epoch 019 | train loss 0.0217 mae 11.79 r2 0.231 | val loss 0.0217 mae 11.83 r2 0.227
+epoch 020 | train loss 0.0216 mae 11.76 r2 0.233 | val loss 0.0212 mae 11.64 r2 0.244
+epoch 021 | train loss 0.0216 mae 11.75 r2 0.235 | val loss 0.0212 mae 11.62 r2 0.244
+epoch 022 | train loss 0.0216 mae 11.75 r2 0.234 | val loss 0.0214 mae 11.68 r2 0.238
+epoch 023 | train loss 0.0215 mae 11.73 r2 0.237 | val loss 0.0213 mae 11.64 r2 0.241
+epoch 024 | train loss 0.0214 mae 11.69 r2 0.240 | val loss 0.0217 mae 11.78 r2 0.227
+epoch 025 | train loss 0.0214 mae 11.68 r2 0.242 | val loss 0.0212 mae 11.65 r2 0.244
+epoch 026 | train loss 0.0214 mae 11.68 r2 0.242 | val loss 0.0213 mae 11.67 r2 0.241
+epoch 027 | train loss 0.0214 mae 11.69 r2 0.241 | val loss 0.0211 mae 11.58 r2 0.247
+epoch 028 | train loss 0.0214 mae 11.68 r2 0.242 | val loss 0.0211 mae 11.62 r2 0.247
+epoch 029 | train loss 0.0213 mae 11.67 r2 0.242 | val loss 0.0211 mae 11.62 r2 0.246
+epoch 030 | train loss 0.0213 mae 11.66 r2 0.243 | val loss 0.0213 mae 11.68 r2 0.238
+epoch 031 | train loss 0.0213 mae 11.65 r2 0.242 | val loss 0.0213 mae 11.65 r2 0.241
+epoch 032 | train loss 0.0212 mae 11.63 r2 0.246 | val loss 0.0209 mae 11.55 r2 0.253
+epoch 033 | train loss 0.0212 mae 11.62 r2 0.247 | val loss 0.0210 mae 11.57 r2 0.250
+epoch 034 | train loss 0.0212 mae 11.61 r2 0.249 | val loss 0.0211 mae 11.60 r2 0.247
+epoch 035 | train loss 0.0212 mae 11.63 r2 0.247 | val loss 0.0212 mae 11.61 r2 0.245
+epoch 036 | train loss 0.0212 mae 11.61 r2 0.249 | val loss 0.0216 mae 11.75 r2 0.228
+epoch 037 | train loss 0.0211 mae 11.60 r2 0.250 | val loss 0.0213 mae 11.67 r2 0.240
+epoch 038 | train loss 0.0211 mae 11.59 r2 0.250 | val loss 0.0210 mae 11.58 r2 0.252
+epoch 039 | train loss 0.0211 mae 11.59 r2 0.251 | val loss 0.0210 mae 11.56 r2 0.251
+epoch 040 | train loss 0.0212 mae 11.61 r2 0.248 | val loss 0.0211 mae 11.61 r2 0.246
+epoch 041 | train loss 0.0211 mae 11.58 r2 0.251 | val loss 0.0214 mae 11.70 r2 0.235
+epoch 042 | train loss 0.0211 mae 11.60 r2 0.250 | val loss 0.0213 mae 11.65 r2 0.239
+epoch 043 | train loss 0.0211 mae 11.60 r2 0.250 | val loss 0.0209 mae 11.53 r2 0.254
+epoch 044 | train loss 0.0211 mae 11.58 r2 0.252 | val loss 0.0210 mae 11.59 r2 0.249
+epoch 045 | train loss 0.0210 mae 11.56 r2 0.253 | val loss 0.0211 mae 11.57 r2 0.249
+epoch 046 | train loss 0.0210 mae 11.56 r2 0.254 | val loss 0.0209 mae 11.54 r2 0.253
+epoch 047 | train loss 0.0213 mae 11.62 r2 0.244 | val loss 0.0212 mae 11.61 r2 0.243
+epoch 048 | train loss nan mae nan r2 nan | val loss nan mae nan r2 nan
+epoch 049 | train loss nan mae nan r2 nan | val loss nan mae nan r2 nan
+epoch 050 | train loss nan mae nan r2 nan | val loss nan mae nan r2 nan
+finished epoch 50; best val loss 0.0209; latest checkpoint saved to /net/scc1/scratch/lucaslu/checkpoints/last_LSTM_checkpoint.pt
