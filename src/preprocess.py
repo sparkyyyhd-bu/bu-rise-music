@@ -3,6 +3,7 @@ import torchaudio
 import os
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
+from audio_config import SAMPLE_RATE, N_FFT, HOP_LENGTH, N_MELS, TARGET_NUM_SAMPLES
 
 if torch.cuda.is_available():
     device = torch.device("cuda")
@@ -53,8 +54,24 @@ loader = DataLoader(
     collate_fn=collate_fn,
 )
 
-mel_transforms = {}
+mel_transform = torchaudio.transforms.MelSpectrogram(
+    sample_rate=SAMPLE_RATE,
+    n_fft=N_FFT,
+    hop_length=HOP_LENGTH,
+    n_mels=N_MELS,
+).to(device)
 amplitude_to_db = torchaudio.transforms.AmplitudeToDB().to(device)
+resamplers = {}
+
+
+def to_fixed_length(waveform):
+    num_samples = waveform.shape[-1]
+    if num_samples < TARGET_NUM_SAMPLES:
+        waveform = torch.nn.functional.pad(waveform, (0, TARGET_NUM_SAMPLES - num_samples))
+    elif num_samples > TARGET_NUM_SAMPLES:
+        waveform = waveform[..., :TARGET_NUM_SAMPLES]
+    return waveform
+
 
 with torch.inference_mode():
     for batch in loader:
@@ -66,15 +83,15 @@ with torch.inference_mode():
             device,
             non_blocking=True,
         )
-        if (sample_rate not in mel_transforms):
-            mel_transforms[sample_rate] = torchaudio.transforms.MelSpectrogram(
-                        sample_rate=sample_rate,
-                        n_fft=2048,
-                        hop_length=512,
-                        n_mels=128
-                    ).to(device)
-        
-        mel_spectrograms = mel_transforms[sample_rate](waveform)
+        if sample_rate != SAMPLE_RATE:
+            if sample_rate not in resamplers:
+                resamplers[sample_rate] = torchaudio.transforms.Resample(
+                    orig_freq=sample_rate, new_freq=SAMPLE_RATE
+                ).to(device)
+            waveform = resamplers[sample_rate](waveform)
+        waveform = to_fixed_length(waveform)
+
+        mel_spectrograms = mel_transform(waveform)
         mel_spectrograms_db = amplitude_to_db(mel_spectrograms)
         mel_to_save = mel_spectrograms_db[0].cpu()
         torch.save(mel_to_save, os.path.join(output_directory, output_name[0]))
