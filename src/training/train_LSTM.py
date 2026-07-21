@@ -53,6 +53,7 @@ def run_epoch(model, loader, criterion, mae_metric, r2_metric, optimizer = None)
             if is_train:
                 optimizer.zero_grad()
                 loss.backward()
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
                 optimizer.step()
 
             total_loss += loss.item() * mels.size(0)
