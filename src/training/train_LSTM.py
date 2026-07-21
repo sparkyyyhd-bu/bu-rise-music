@@ -111,7 +111,7 @@ def main():
     mae_metric = MeanAbsoluteError().to(device)
     r2_metric = R2Score().to(device)
 
-    epochs = 50
+    epochs = 150
     last_checkpoint_path = os.path.join(checkpoint_dir, "last_LSTM_checkpoint.pt")
     best_checkpoint_path = os.path.join(checkpoint_dir, "best_LSTM_model.pt")
     start_epoch = 0
