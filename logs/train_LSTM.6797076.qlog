@@ -1,0 +1,397 @@
+job 6797076 started on scc-705 at Tue Jul 21 10:06:01 EDT 2026
+Requirement already satisfied: pip in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (23.0.1)
+Collecting pip
+  Downloading pip-26.1.2-py3-none-any.whl (1.8 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.8/1.8 MB 26.3 MB/s eta 0:00:00
+Requirement already satisfied: setuptools in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (65.5.0)
+Collecting setuptools
+  Downloading setuptools-83.0.0-py3-none-any.whl (1.0 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.0/1.0 MB 396.2 MB/s eta 0:00:00
+Installing collected packages: setuptools, pip
+  Attempting uninstall: setuptools
+    Found existing installation: setuptools 65.5.0
+    Uninstalling setuptools-65.5.0:
+      Successfully uninstalled setuptools-65.5.0
+  Attempting uninstall: pip
+    Found existing installation: pip 23.0.1
+    Uninstalling pip-23.0.1:
+      Successfully uninstalled pip-23.0.1
+Successfully installed pip-26.1.2 setuptools-83.0.0
+Collecting pandas (from -r requirements.txt (line 1))
+  Downloading pandas-2.3.3-cp310-cp310-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl.metadata (91 kB)
+Collecting requests (from -r requirements.txt (line 2))
+  Downloading requests-2.34.2-py3-none-any.whl.metadata (4.8 kB)
+Collecting kagglehub (from -r requirements.txt (line 3))
+  Downloading kagglehub-1.0.2-py3-none-any.whl.metadata (40 kB)
+Collecting ipython (from -r requirements.txt (line 4))
+  Downloading ipython-8.39.0-py3-none-any.whl.metadata (5.1 kB)
+Collecting torch (from -r requirements.txt (line 5))
+  Downloading torch-2.13.0-cp310-cp310-manylinux_2_28_x86_64.whl.metadata (38 kB)
+Collecting torchvision (from -r requirements.txt (line 6))
+  Downloading torchvision-0.28.0-cp310-cp310-manylinux_2_28_x86_64.whl.metadata (5.6 kB)
+Collecting torchaudio (from -r requirements.txt (line 7))
+  Downloading torchaudio-2.11.0-cp310-cp310-manylinux_2_28_x86_64.whl.metadata (6.9 kB)
+Collecting torchmetrics (from -r requirements.txt (line 8))
+  Downloading torchmetrics-1.9.0-py3-none-any.whl.metadata (23 kB)
+Collecting tqdm (from -r requirements.txt (line 9))
+  Downloading tqdm-4.69.0-py3-none-any.whl.metadata (57 kB)
+Collecting numpy>=1.22.4 (from pandas->-r requirements.txt (line 1))
+  Downloading numpy-2.2.6-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (62 kB)
+Collecting python-dateutil>=2.8.2 (from pandas->-r requirements.txt (line 1))
+  Downloading python_dateutil-2.9.0.post0-py2.py3-none-any.whl.metadata (8.4 kB)
+Collecting pytz>=2020.1 (from pandas->-r requirements.txt (line 1))
+  Downloading pytz-2026.2-py2.py3-none-any.whl.metadata (22 kB)
+Collecting tzdata>=2022.7 (from pandas->-r requirements.txt (line 1))
+  Downloading tzdata-2026.3-py2.py3-none-any.whl.metadata (1.4 kB)
+Collecting charset_normalizer<4,>=2 (from requests->-r requirements.txt (line 2))
+  Downloading charset_normalizer-3.4.9-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (41 kB)
+Collecting idna<4,>=2.5 (from requests->-r requirements.txt (line 2))
+  Downloading idna-3.18-py3-none-any.whl.metadata (6.1 kB)
+Collecting urllib3<3,>=1.26 (from requests->-r requirements.txt (line 2))
+  Downloading urllib3-2.7.0-py3-none-any.whl.metadata (6.9 kB)
+Collecting certifi>=2023.5.7 (from requests->-r requirements.txt (line 2))
+  Downloading certifi-2026.6.17-py3-none-any.whl.metadata (2.5 kB)
+Collecting kagglesdk<1.0,>=0.1.22 (from kagglehub->-r requirements.txt (line 3))
+  Downloading kagglesdk-0.1.28-py3-none-any.whl.metadata (13 kB)
+Collecting packaging (from kagglehub->-r requirements.txt (line 3))
+  Downloading packaging-26.2-py3-none-any.whl.metadata (3.5 kB)
+Collecting pyyaml (from kagglehub->-r requirements.txt (line 3))
+  Downloading pyyaml-6.0.3-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (2.4 kB)
+Collecting protobuf (from kagglesdk<1.0,>=0.1.22->kagglehub->-r requirements.txt (line 3))
+  Downloading protobuf-7.35.1-cp310-abi3-manylinux2014_x86_64.whl.metadata (595 bytes)
+Collecting decorator (from ipython->-r requirements.txt (line 4))
+  Downloading decorator-5.3.1-py3-none-any.whl.metadata (3.9 kB)
+Collecting exceptiongroup (from ipython->-r requirements.txt (line 4))
+  Downloading exceptiongroup-1.3.1-py3-none-any.whl.metadata (6.7 kB)
+Collecting jedi>=0.16 (from ipython->-r requirements.txt (line 4))
+  Downloading jedi-0.20.0-py2.py3-none-any.whl.metadata (23 kB)
+Collecting matplotlib-inline (from ipython->-r requirements.txt (line 4))
+  Downloading matplotlib_inline-0.2.2-py3-none-any.whl.metadata (2.4 kB)
+Collecting pexpect>4.3 (from ipython->-r requirements.txt (line 4))
+  Downloading pexpect-4.9.0-py2.py3-none-any.whl.metadata (2.5 kB)
+Collecting prompt_toolkit<3.1.0,>=3.0.41 (from ipython->-r requirements.txt (line 4))
+  Downloading prompt_toolkit-3.0.52-py3-none-any.whl.metadata (6.4 kB)
+Collecting pygments>=2.4.0 (from ipython->-r requirements.txt (line 4))
+  Downloading pygments-2.20.0-py3-none-any.whl.metadata (2.5 kB)
+Collecting stack_data (from ipython->-r requirements.txt (line 4))
+  Downloading stack_data-0.6.3-py3-none-any.whl.metadata (18 kB)
+Collecting traitlets>=5.13.0 (from ipython->-r requirements.txt (line 4))
+  Downloading traitlets-5.15.1-py3-none-any.whl.metadata (10 kB)
+Collecting typing_extensions>=4.6 (from ipython->-r requirements.txt (line 4))
+  Downloading typing_extensions-4.16.0-py3-none-any.whl.metadata (3.3 kB)
+Collecting wcwidth (from prompt_toolkit<3.1.0,>=3.0.41->ipython->-r requirements.txt (line 4))
+  Downloading wcwidth-0.8.2-py3-none-any.whl.metadata (43 kB)
+Collecting filelock (from torch->-r requirements.txt (line 5))
+  Downloading filelock-3.32.0-py3-none-any.whl.metadata (2.0 kB)
+Requirement already satisfied: setuptools>=77.0.3 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from torch->-r requirements.txt (line 5)) (83.0.0)
+Collecting sympy>=1.13.3 (from torch->-r requirements.txt (line 5))
+  Downloading sympy-1.14.0-py3-none-any.whl.metadata (12 kB)
+Collecting networkx>=2.5.1 (from torch->-r requirements.txt (line 5))
+  Downloading networkx-3.4.2-py3-none-any.whl.metadata (6.3 kB)
+Collecting jinja2 (from torch->-r requirements.txt (line 5))
+  Downloading jinja2-3.1.6-py3-none-any.whl.metadata (2.9 kB)
+Collecting fsspec>=0.8.5 (from torch->-r requirements.txt (line 5))
+  Downloading fsspec-2026.6.0-py3-none-any.whl.metadata (10 kB)
+Collecting cuda-toolkit==13.0.3 (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5))
+  Downloading cuda_toolkit-13.0.3.0-py2.py3-none-any.whl.metadata (17 kB)
+Collecting cuda-bindings<14,>=13.0.3 (from torch->-r requirements.txt (line 5))
+  Downloading cuda_bindings-13.3.1-cp310-cp310-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl.metadata (2.5 kB)
+Collecting nvidia-cudnn-cu13==9.20.0.48 (from torch->-r requirements.txt (line 5))
+  Downloading nvidia_cudnn_cu13-9.20.0.48-py3-none-manylinux_2_27_x86_64.whl.metadata (1.9 kB)
+Collecting nvidia-cusparselt-cu13==0.8.1 (from torch->-r requirements.txt (line 5))
+  Downloading nvidia_cusparselt_cu13-0.8.1-py3-none-manylinux2014_x86_64.whl.metadata (12 kB)
+Collecting nvidia-nccl-cu13==2.29.7 (from torch->-r requirements.txt (line 5))
+  Downloading nvidia_nccl_cu13-2.29.7-py3-none-manylinux_2_18_x86_64.whl.metadata (2.1 kB)
+Collecting nvidia-nvshmem-cu13==3.4.5 (from torch->-r requirements.txt (line 5))
+  Downloading nvidia_nvshmem_cu13-3.4.5-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (2.1 kB)
+Collecting triton==3.7.1 (from torch->-r requirements.txt (line 5))
+  Downloading triton-3.7.1-cp310-cp310-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (1.7 kB)
+Collecting nvidia-cublas==13.1.1.3.* (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5))
+  Downloading nvidia_cublas-13.1.1.3-py3-none-manylinux_2_27_x86_64.whl.metadata (1.8 kB)
+Collecting nvidia-cuda-nvrtc==13.0.88.* (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5))
+  Downloading nvidia_cuda_nvrtc-13.0.88-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl.metadata (1.7 kB)
+Collecting nvidia-cuda-runtime==13.0.96.* (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5))
+  Downloading nvidia_cuda_runtime-13.0.96-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (1.7 kB)
+Collecting nvidia-cufile==1.15.1.6.* (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5))
+  Downloading nvidia_cufile-1.15.1.6-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (1.7 kB)
+Collecting nvidia-cusolver==12.0.4.66.* (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5))
+  Downloading nvidia_cusolver-12.0.4.66-py3-none-manylinux_2_27_x86_64.whl.metadata (1.8 kB)
+Collecting nvidia-cusparse==12.6.3.3.* (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5))
+  Downloading nvidia_cusparse-12.6.3.3-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (1.8 kB)
+Collecting nvidia-nvjitlink<14,>=13.0.88 (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5))
+  Downloading nvidia_nvjitlink-13.3.33-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl.metadata (1.8 kB)
+Collecting nvidia-cufft==12.0.0.61.* (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5))
+  Downloading nvidia_cufft-12.0.0.61-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (1.8 kB)
+Collecting nvidia-curand==10.4.0.35.* (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5))
+  Downloading nvidia_curand-10.4.0.35-py3-none-manylinux_2_27_x86_64.whl.metadata (1.7 kB)
+Collecting nvidia-nvtx==13.0.85.* (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5))
+  Downloading nvidia_nvtx-13.0.85-py3-none-manylinux1_x86_64.manylinux_2_5_x86_64.whl.metadata (1.8 kB)
+Collecting nvidia-cuda-cupti==13.0.85.* (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5))
+  Downloading nvidia_cuda_cupti-13.0.85-py3-none-manylinux_2_25_x86_64.whl.metadata (1.7 kB)
+Collecting cuda-pathfinder>=1.4.2 (from cuda-bindings<14,>=13.0.3->torch->-r requirements.txt (line 5))
+  Downloading cuda_pathfinder-1.5.6-py3-none-any.whl.metadata (1.9 kB)
+Collecting pillow!=8.3.*,>=5.3.0 (from torchvision->-r requirements.txt (line 6))
+  Downloading pillow-12.3.0-cp310-cp310-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (9.1 kB)
+Collecting lightning-utilities>=0.15.3 (from torchmetrics->-r requirements.txt (line 8))
+  Downloading lightning_utilities-0.15.3-py3-none-any.whl.metadata (5.5 kB)
+Collecting parso<0.9.0,>=0.8.6 (from jedi>=0.16->ipython->-r requirements.txt (line 4))
+  Downloading parso-0.8.7-py2.py3-none-any.whl.metadata (8.2 kB)
+Collecting ptyprocess>=0.5 (from pexpect>4.3->ipython->-r requirements.txt (line 4))
+  Downloading ptyprocess-0.7.0-py2.py3-none-any.whl.metadata (1.3 kB)
+Collecting six>=1.5 (from python-dateutil>=2.8.2->pandas->-r requirements.txt (line 1))
+  Downloading six-1.17.0-py2.py3-none-any.whl.metadata (1.7 kB)
+Collecting mpmath<1.4,>=1.1.0 (from sympy>=1.13.3->torch->-r requirements.txt (line 5))
+  Downloading mpmath-1.3.0-py3-none-any.whl.metadata (8.6 kB)
+Collecting MarkupSafe>=2.0 (from jinja2->torch->-r requirements.txt (line 5))
+  Downloading markupsafe-3.0.3-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (2.7 kB)
+Collecting executing>=1.2.0 (from stack_data->ipython->-r requirements.txt (line 4))
+  Downloading executing-2.2.1-py2.py3-none-any.whl.metadata (8.9 kB)
+Collecting asttokens>=2.1.0 (from stack_data->ipython->-r requirements.txt (line 4))
+  Downloading asttokens-3.0.2-py3-none-any.whl.metadata (5.7 kB)
+Collecting pure-eval (from stack_data->ipython->-r requirements.txt (line 4))
+  Downloading pure_eval-0.2.3-py3-none-any.whl.metadata (6.3 kB)
+Downloading pandas-2.3.3-cp310-cp310-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl (12.8 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 12.8/12.8 MB 154.9 MB/s  0:00:00
+Downloading requests-2.34.2-py3-none-any.whl (73 kB)
+Downloading charset_normalizer-3.4.9-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (223 kB)
+Downloading idna-3.18-py3-none-any.whl (65 kB)
+Downloading urllib3-2.7.0-py3-none-any.whl (131 kB)
+Downloading kagglehub-1.0.2-py3-none-any.whl (70 kB)
+Downloading kagglesdk-0.1.28-py3-none-any.whl (230 kB)
+Downloading ipython-8.39.0-py3-none-any.whl (831 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 831.8/831.8 kB 851.8 MB/s  0:00:00
+Downloading prompt_toolkit-3.0.52-py3-none-any.whl (391 kB)
+Downloading torch-2.13.0-cp310-cp310-manylinux_2_28_x86_64.whl (526.6 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 526.6/526.6 MB 229.5 MB/s  0:00:02
+Downloading cuda_toolkit-13.0.3.0-py2.py3-none-any.whl (2.5 kB)
+Downloading nvidia_cudnn_cu13-9.20.0.48-py3-none-manylinux_2_27_x86_64.whl (366.2 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 366.2/366.2 MB 239.3 MB/s  0:00:01
+Downloading nvidia_cusparselt_cu13-0.8.1-py3-none-manylinux2014_x86_64.whl (170.1 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 170.1/170.1 MB 239.7 MB/s  0:00:00
+Downloading nvidia_nccl_cu13-2.29.7-py3-none-manylinux_2_18_x86_64.whl (206.0 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 206.0/206.0 MB 238.8 MB/s  0:00:00
+Downloading nvidia_nvshmem_cu13-3.4.5-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (60.4 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 60.4/60.4 MB 243.1 MB/s  0:00:00
+Downloading triton-3.7.1-cp310-cp310-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (197.6 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 197.6/197.6 MB 239.1 MB/s  0:00:00
+Downloading cuda_bindings-13.3.1-cp310-cp310-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl (6.7 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.7/6.7 MB 243.5 MB/s  0:00:00
+Downloading nvidia_cublas-13.1.1.3-py3-none-manylinux_2_27_x86_64.whl (423.1 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 423.1/423.1 MB 238.1 MB/s  0:00:01
+Downloading nvidia_cuda_cupti-13.0.85-py3-none-manylinux_2_25_x86_64.whl (10.7 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 10.7/10.7 MB 251.4 MB/s  0:00:00
+Downloading nvidia_cuda_nvrtc-13.0.88-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl (90.2 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 90.2/90.2 MB 239.3 MB/s  0:00:00
+Downloading nvidia_cuda_runtime-13.0.96-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (2.2 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.2/2.2 MB 489.9 MB/s  0:00:00
+Downloading nvidia_cufft-12.0.0.61-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (214.1 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 214.1/214.1 MB 237.8 MB/s  0:00:00
+Downloading nvidia_cufile-1.15.1.6-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (1.2 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.2/1.2 MB 579.6 MB/s  0:00:00
+Downloading nvidia_curand-10.4.0.35-py3-none-manylinux_2_27_x86_64.whl (59.5 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 59.5/59.5 MB 240.7 MB/s  0:00:00
+Downloading nvidia_cusolver-12.0.4.66-py3-none-manylinux_2_27_x86_64.whl (200.9 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 200.9/200.9 MB 239.3 MB/s  0:00:00
+Downloading nvidia_cusparse-12.6.3.3-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (145.9 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 145.9/145.9 MB 240.0 MB/s  0:00:00
+Downloading nvidia_nvjitlink-13.3.33-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl (40.7 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 40.7/40.7 MB 241.3 MB/s  0:00:00
+Downloading nvidia_nvtx-13.0.85-py3-none-manylinux1_x86_64.manylinux_2_5_x86_64.whl (148 kB)
+Downloading torchvision-0.28.0-cp310-cp310-manylinux_2_28_x86_64.whl (7.7 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 7.7/7.7 MB 243.1 MB/s  0:00:00
+Downloading torchaudio-2.11.0-cp310-cp310-manylinux_2_28_x86_64.whl (1.8 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.8/1.8 MB 401.0 MB/s  0:00:00
+Downloading torchmetrics-1.9.0-py3-none-any.whl (983 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 983.4/983.4 kB 168.7 MB/s  0:00:00
+Downloading tqdm-4.69.0-py3-none-any.whl (676 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 676.7/676.7 kB 709.9 MB/s  0:00:00
+Downloading certifi-2026.6.17-py3-none-any.whl (133 kB)
+Downloading cuda_pathfinder-1.5.6-py3-none-any.whl (52 kB)
+Downloading fsspec-2026.6.0-py3-none-any.whl (203 kB)
+Downloading jedi-0.20.0-py2.py3-none-any.whl (4.9 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.9/4.9 MB 228.1 MB/s  0:00:00
+Downloading parso-0.8.7-py2.py3-none-any.whl (107 kB)
+Downloading lightning_utilities-0.15.3-py3-none-any.whl (31 kB)
+Downloading networkx-3.4.2-py3-none-any.whl (1.7 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.7/1.7 MB 477.3 MB/s  0:00:00
+Downloading numpy-2.2.6-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (16.8 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 16.8/16.8 MB 248.0 MB/s  0:00:00
+Downloading packaging-26.2-py3-none-any.whl (100 kB)
+Downloading pexpect-4.9.0-py2.py3-none-any.whl (63 kB)
+Downloading pillow-12.3.0-cp310-cp310-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (6.9 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.9/6.9 MB 248.1 MB/s  0:00:00
+Downloading ptyprocess-0.7.0-py2.py3-none-any.whl (13 kB)
+Downloading pygments-2.20.0-py3-none-any.whl (1.2 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.2/1.2 MB 570.4 MB/s  0:00:00
+Downloading python_dateutil-2.9.0.post0-py2.py3-none-any.whl (229 kB)
+Downloading pytz-2026.2-py2.py3-none-any.whl (510 kB)
+Downloading six-1.17.0-py2.py3-none-any.whl (11 kB)
+Downloading sympy-1.14.0-py3-none-any.whl (6.3 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.3/6.3 MB 236.3 MB/s  0:00:00
+Downloading mpmath-1.3.0-py3-none-any.whl (536 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 536.2/536.2 kB 765.6 MB/s  0:00:00
+Downloading traitlets-5.15.1-py3-none-any.whl (85 kB)
+Downloading typing_extensions-4.16.0-py3-none-any.whl (45 kB)
+Downloading tzdata-2026.3-py2.py3-none-any.whl (348 kB)
+Downloading decorator-5.3.1-py3-none-any.whl (10 kB)
+Downloading exceptiongroup-1.3.1-py3-none-any.whl (16 kB)
+Downloading filelock-3.32.0-py3-none-any.whl (97 kB)
+Downloading jinja2-3.1.6-py3-none-any.whl (134 kB)
+Downloading markupsafe-3.0.3-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (20 kB)
+Downloading matplotlib_inline-0.2.2-py3-none-any.whl (9.5 kB)
+Downloading protobuf-7.35.1-cp310-abi3-manylinux2014_x86_64.whl (327 kB)
+Downloading pyyaml-6.0.3-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (770 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 770.3/770.3 kB 691.6 MB/s  0:00:00
+Downloading stack_data-0.6.3-py3-none-any.whl (24 kB)
+Downloading asttokens-3.0.2-py3-none-any.whl (28 kB)
+Downloading executing-2.2.1-py2.py3-none-any.whl (28 kB)
+Downloading pure_eval-0.2.3-py3-none-any.whl (11 kB)
+Downloading wcwidth-0.8.2-py3-none-any.whl (323 kB)
+Installing collected packages: torchaudio, pytz, pure-eval, ptyprocess, nvidia-cusparselt-cu13, mpmath, cuda-toolkit, wcwidth, urllib3, tzdata, typing_extensions, triton, traitlets, tqdm, sympy, six, pyyaml, pygments, protobuf, pillow, pexpect, parso, packaging, nvidia-nvtx, nvidia-nvshmem-cu13, nvidia-nvjitlink, nvidia-nccl-cu13, nvidia-curand, nvidia-cufile, nvidia-cuda-runtime, nvidia-cuda-nvrtc, nvidia-cuda-cupti, numpy, networkx, MarkupSafe, idna, fsspec, filelock, executing, decorator, cuda-pathfinder, charset_normalizer, certifi, asttokens, stack_data, requests, python-dateutil, prompt_toolkit, nvidia-cusparse, nvidia-cufft, nvidia-cublas, matplotlib-inline, lightning-utilities, jinja2, jedi, exceptiongroup, cuda-bindings, pandas, nvidia-cusolver, nvidia-cudnn-cu13, kagglesdk, ipython, kagglehub, torch, torchvision, torchmetrics
+
+Successfully installed MarkupSafe-3.0.3 asttokens-3.0.2 certifi-2026.6.17 charset_normalizer-3.4.9 cuda-bindings-13.3.1 cuda-pathfinder-1.5.6 cuda-toolkit-13.0.3.0 decorator-5.3.1 exceptiongroup-1.3.1 executing-2.2.1 filelock-3.32.0 fsspec-2026.6.0 idna-3.18 ipython-8.39.0 jedi-0.20.0 jinja2-3.1.6 kagglehub-1.0.2 kagglesdk-0.1.28 lightning-utilities-0.15.3 matplotlib-inline-0.2.2 mpmath-1.3.0 networkx-3.4.2 numpy-2.2.6 nvidia-cublas-13.1.1.3 nvidia-cuda-cupti-13.0.85 nvidia-cuda-nvrtc-13.0.88 nvidia-cuda-runtime-13.0.96 nvidia-cudnn-cu13-9.20.0.48 nvidia-cufft-12.0.0.61 nvidia-cufile-1.15.1.6 nvidia-curand-10.4.0.35 nvidia-cusolver-12.0.4.66 nvidia-cusparse-12.6.3.3 nvidia-cusparselt-cu13-0.8.1 nvidia-nccl-cu13-2.29.7 nvidia-nvjitlink-13.3.33 nvidia-nvshmem-cu13-3.4.5 nvidia-nvtx-13.0.85 packaging-26.2 pandas-2.3.3 parso-0.8.7 pexpect-4.9.0 pillow-12.3.0 prompt_toolkit-3.0.52 protobuf-7.35.1 ptyprocess-0.7.0 pure-eval-0.2.3 pygments-2.20.0 python-dateutil-2.9.0.post0 pytz-2026.2 pyyaml-6.0.3 requests-2.34.2 six-1.17.0 stack_data-0.6.3 sympy-1.14.0 torch-2.13.0 torchaudio-2.11.0 torchmetrics-1.9.0 torchvision-0.28.0 tqdm-4.69.0 traitlets-5.15.1 triton-3.7.1 typing_extensions-4.16.0 tzdata-2026.3 urllib3-2.7.0 wcwidth-0.8.2
+loaded 101934 labeled mel spectrograms
+epoch 001 | train loss 0.0248 mae 12.69 r2 0.122 | val loss 0.0240 mae 12.47 r2 0.153
+epoch 002 | train loss 0.0233 mae 12.30 r2 0.174 | val loss 0.0229 mae 12.19 r2 0.192
+epoch 003 | train loss 0.0227 mae 12.11 r2 0.195 | val loss 0.0224 mae 12.00 r2 0.210
+epoch 004 | train loss 0.0224 mae 12.01 r2 0.205 | val loss 0.0221 mae 11.94 r2 0.217
+epoch 005 | train loss 0.0223 mae 11.97 r2 0.210 | val loss 0.0224 mae 11.97 r2 0.208
+epoch 006 | train loss 0.0221 mae 11.91 r2 0.217 | val loss 0.0224 mae 12.01 r2 0.207
+epoch 007 | train loss 0.0220 mae 11.89 r2 0.219 | val loss 0.0222 mae 11.93 r2 0.217
+epoch 008 | train loss 0.0219 mae 11.86 r2 0.222 | val loss 0.0220 mae 11.92 r2 0.222
+epoch 009 | train loss 0.0218 mae 11.83 r2 0.225 | val loss 0.0217 mae 11.81 r2 0.232
+epoch 010 | train loss 0.0217 mae 11.80 r2 0.229 | val loss 0.0215 mae 11.72 r2 0.241
+epoch 011 | train loss 0.0217 mae 11.79 r2 0.229 | val loss 0.0220 mae 11.91 r2 0.223
+epoch 012 | train loss 0.0217 mae 11.76 r2 0.231 | val loss 0.0219 mae 11.85 r2 0.226
+epoch 013 | train loss 0.0216 mae 11.74 r2 0.234 | val loss 0.0217 mae 11.80 r2 0.234
+epoch 014 | train loss 0.0215 mae 11.72 r2 0.236 | val loss 0.0214 mae 11.72 r2 0.242
+epoch 015 | train loss 0.0215 mae 11.72 r2 0.237 | val loss 0.0217 mae 11.82 r2 0.232
+epoch 016 | train loss 0.0215 mae 11.71 r2 0.238 | val loss 0.0217 mae 11.76 r2 0.234
+epoch 017 | train loss 0.0215 mae 11.70 r2 0.239 | val loss 0.0218 mae 11.86 r2 0.229
+epoch 018 | train loss 0.0214 mae 11.70 r2 0.240 | val loss 0.0216 mae 11.78 r2 0.236
+epoch 019 | train loss 0.0214 mae 11.67 r2 0.241 | val loss 0.0216 mae 11.80 r2 0.238
+epoch 020 | train loss 0.0213 mae 11.66 r2 0.243 | val loss 0.0214 mae 11.73 r2 0.244
+epoch 021 | train loss 0.0213 mae 11.67 r2 0.243 | val loss 0.0216 mae 11.81 r2 0.237
+epoch 022 | train loss 0.0213 mae 11.64 r2 0.246 | val loss 0.0220 mae 11.84 r2 0.224
+epoch 023 | train loss 0.0213 mae 11.64 r2 0.246 | val loss 0.0220 mae 11.87 r2 0.223
+epoch 024 | train loss 0.0213 mae 11.63 r2 0.246 | val loss 0.0218 mae 11.79 r2 0.230
+epoch 025 | train loss 0.0212 mae 11.61 r2 0.248 | val loss 0.0218 mae 11.80 r2 0.231
+epoch 026 | train loss 0.0212 mae 11.62 r2 0.247 | val loss 0.0216 mae 11.80 r2 0.238
+epoch 027 | train loss 0.0212 mae 11.61 r2 0.248 | val loss 0.0216 mae 11.78 r2 0.236
+epoch 028 | train loss 0.0212 mae 11.62 r2 0.249 | val loss 0.0216 mae 11.78 r2 0.237
+epoch 029 | train loss 0.0211 mae 11.60 r2 0.250 | val loss 0.0214 mae 11.71 r2 0.243
+epoch 030 | train loss 0.0211 mae 11.59 r2 0.251 | val loss 0.0215 mae 11.76 r2 0.240
+epoch 031 | train loss 0.0211 mae 11.58 r2 0.250 | val loss 0.0214 mae 11.73 r2 0.245
+epoch 032 | train loss 0.0210 mae 11.57 r2 0.253 | val loss 0.0212 mae 11.65 r2 0.250
+epoch 033 | train loss 0.0211 mae 11.58 r2 0.253 | val loss 0.0223 mae 11.95 r2 0.213
+epoch 034 | train loss 0.0211 mae 11.57 r2 0.253 | val loss 0.0211 mae 11.64 r2 0.253
+epoch 035 | train loss 0.0210 mae 11.56 r2 0.254 | val loss 0.0221 mae 11.92 r2 0.218
+epoch 036 | train loss 0.0210 mae 11.56 r2 0.255 | val loss 0.0216 mae 11.77 r2 0.238
+epoch 037 | train loss 0.0210 mae 11.55 r2 0.255 | val loss 0.0215 mae 11.72 r2 0.241
+epoch 038 | train loss 0.0210 mae 11.55 r2 0.256 | val loss 0.0214 mae 11.71 r2 0.243
+epoch 039 | train loss 0.0209 mae 11.52 r2 0.258 | val loss 0.0213 mae 11.70 r2 0.246
+epoch 040 | train loss 0.0209 mae 11.52 r2 0.258 | val loss 0.0212 mae 11.63 r2 0.249
+epoch 041 | train loss 0.0209 mae 11.53 r2 0.257 | val loss 0.0215 mae 11.72 r2 0.240
+epoch 042 | train loss 0.0209 mae 11.53 r2 0.257 | val loss 0.0215 mae 11.76 r2 0.240
+epoch 043 | train loss 0.0209 mae 11.53 r2 0.257 | val loss 0.0219 mae 11.85 r2 0.228
+epoch 044 | train loss 0.0209 mae 11.52 r2 0.259 | val loss 0.0212 mae 11.66 r2 0.251
+epoch 045 | train loss 0.0209 mae 11.51 r2 0.260 | val loss 0.0212 mae 11.63 r2 0.251
+epoch 046 | train loss 0.0209 mae 11.50 r2 0.260 | val loss 0.0212 mae 11.66 r2 0.249
+epoch 047 | train loss 0.0208 mae 11.48 r2 0.262 | val loss 0.0217 mae 11.77 r2 0.234
+epoch 048 | train loss 0.0208 mae 11.49 r2 0.262 | val loss 0.0212 mae 11.65 r2 0.252
+epoch 049 | train loss 0.0208 mae 11.50 r2 0.262 | val loss 0.0214 mae 11.68 r2 0.245
+epoch 050 | train loss 0.0208 mae 11.48 r2 0.262 | val loss 0.0213 mae 11.67 r2 0.248
+epoch 051 | train loss 0.0208 mae 11.48 r2 0.263 | val loss 0.0214 mae 11.71 r2 0.243
+epoch 052 | train loss 0.0208 mae 11.49 r2 0.262 | val loss 0.0212 mae 11.65 r2 0.250
+epoch 053 | train loss 0.0208 mae 11.49 r2 0.263 | val loss 0.0212 mae 11.65 r2 0.252
+epoch 054 | train loss 0.0208 mae 11.48 r2 0.263 | val loss 0.0214 mae 11.69 r2 0.245
+epoch 055 | train loss 0.0207 mae 11.46 r2 0.265 | val loss 0.0213 mae 11.68 r2 0.247
+epoch 056 | train loss 0.0207 mae 11.47 r2 0.265 | val loss 0.0214 mae 11.72 r2 0.245
+epoch 057 | train loss 0.0207 mae 11.47 r2 0.265 | val loss 0.0215 mae 11.74 r2 0.240
+epoch 058 | train loss 0.0207 mae 11.46 r2 0.266 | val loss 0.0215 mae 11.71 r2 0.239
+epoch 059 | train loss 0.0207 mae 11.46 r2 0.265 | val loss 0.0220 mae 11.87 r2 0.221
+epoch 060 | train loss 0.0207 mae 11.44 r2 0.267 | val loss 0.0211 mae 11.61 r2 0.254
+epoch 061 | train loss 0.0207 mae 11.46 r2 0.266 | val loss 0.0212 mae 11.64 r2 0.251
+epoch 062 | train loss 0.0207 mae 11.45 r2 0.266 | val loss 0.0212 mae 11.63 r2 0.252
+epoch 063 | train loss 0.0207 mae 11.45 r2 0.266 | val loss 0.0215 mae 11.70 r2 0.242
+epoch 064 | train loss 0.0207 mae 11.45 r2 0.267 | val loss 0.0213 mae 11.69 r2 0.247
+epoch 065 | train loss 0.0207 mae 11.44 r2 0.267 | val loss 0.0218 mae 11.80 r2 0.230
+epoch 066 | train loss 0.0207 mae 11.46 r2 0.266 | val loss 0.0212 mae 11.65 r2 0.251
+epoch 067 | train loss 0.0206 mae 11.44 r2 0.268 | val loss 0.0213 mae 11.65 r2 0.248
+epoch 068 | train loss 0.0206 mae 11.44 r2 0.268 | val loss 0.0215 mae 11.71 r2 0.241
+epoch 069 | train loss 0.0206 mae 11.43 r2 0.268 | val loss 0.0213 mae 11.71 r2 0.246
+epoch 070 | train loss 0.0206 mae 11.43 r2 0.269 | val loss 0.0211 mae 11.58 r2 0.254
+epoch 071 | train loss 0.0206 mae 11.43 r2 0.269 | val loss 0.0214 mae 11.67 r2 0.245
+epoch 072 | train loss 0.0206 mae 11.41 r2 0.270 | val loss 0.0211 mae 11.62 r2 0.255
+epoch 073 | train loss 0.0206 mae 11.40 r2 0.271 | val loss 0.0214 mae 11.72 r2 0.243
+epoch 074 | train loss 0.0205 mae 11.39 r2 0.273 | val loss 0.0215 mae 11.72 r2 0.240
+epoch 075 | train loss 0.0205 mae 11.41 r2 0.271 | val loss 0.0213 mae 11.67 r2 0.247
+epoch 076 | train loss 0.0205 mae 11.40 r2 0.273 | val loss 0.0212 mae 11.64 r2 0.251
+epoch 077 | train loss 0.0205 mae 11.38 r2 0.273 | val loss 0.0212 mae 11.62 r2 0.252
+epoch 078 | train loss 0.0205 mae 11.38 r2 0.273 | val loss 0.0213 mae 11.67 r2 0.249
+epoch 079 | train loss 0.0207 mae 11.46 r2 0.265 | val loss 0.0219 mae 11.81 r2 0.228
+epoch 080 | train loss 0.0206 mae 11.43 r2 0.268 | val loss 0.0211 mae 11.59 r2 0.254
+epoch 081 | train loss 0.0206 mae 11.41 r2 0.271 | val loss 0.0215 mae 11.74 r2 0.240
+epoch 082 | train loss 0.0205 mae 11.39 r2 0.273 | val loss 0.0214 mae 11.69 r2 0.244
+epoch 083 | train loss 0.0205 mae 11.40 r2 0.273 | val loss 0.0212 mae 11.65 r2 0.249
+epoch 084 | train loss 0.0204 mae 11.37 r2 0.275 | val loss 0.0213 mae 11.67 r2 0.248
+epoch 085 | train loss 0.0204 mae 11.38 r2 0.275 | val loss 0.0211 mae 11.62 r2 0.256
+epoch 086 | train loss 0.0204 mae 11.36 r2 0.275 | val loss 0.0210 mae 11.58 r2 0.258
+epoch 087 | train loss 0.0205 mae 11.39 r2 0.274 | val loss 0.0217 mae 11.80 r2 0.232
+epoch 088 | train loss 0.0204 mae 11.38 r2 0.275 | val loss 0.0212 mae 11.63 r2 0.251
+epoch 089 | train loss 0.0204 mae 11.37 r2 0.275 | val loss 0.0212 mae 11.64 r2 0.252
+epoch 090 | train loss 0.0205 mae 11.39 r2 0.273 | val loss 0.0210 mae 11.59 r2 0.257
+epoch 091 | train loss 0.0204 mae 11.36 r2 0.275 | val loss 0.0213 mae 11.68 r2 0.248
+epoch 092 | train loss 0.0204 mae 11.36 r2 0.275 | val loss 0.0214 mae 11.70 r2 0.243
+epoch 093 | train loss 0.0205 mae 11.38 r2 0.273 | val loss 0.0213 mae 11.66 r2 0.247
+epoch 094 | train loss 0.0205 mae 11.36 r2 0.275 | val loss 0.0213 mae 11.67 r2 0.246
+epoch 095 | train loss 0.0205 mae 11.38 r2 0.273 | val loss 0.0209 mae 11.58 r2 0.260
+epoch 096 | train loss 0.0204 mae 11.37 r2 0.275 | val loss 0.0212 mae 11.65 r2 0.249
+epoch 097 | train loss 0.0204 mae 11.36 r2 0.276 | val loss 0.0212 mae 11.67 r2 0.250
+epoch 098 | train loss 0.0205 mae 11.38 r2 0.274 | val loss 0.0211 mae 11.62 r2 0.256
+epoch 099 | train loss 0.0204 mae 11.35 r2 0.277 | val loss 0.0215 mae 11.73 r2 0.241
+epoch 100 | train loss 0.0204 mae 11.36 r2 0.277 | val loss 0.0214 mae 11.72 r2 0.243
+epoch 101 | train loss 0.0204 mae 11.35 r2 0.278 | val loss 0.0217 mae 11.82 r2 0.231
+epoch 102 | train loss 0.0204 mae 11.36 r2 0.276 | val loss 0.0216 mae 11.75 r2 0.237
+epoch 103 | train loss 0.0203 mae 11.35 r2 0.278 | val loss 0.0215 mae 11.74 r2 0.240
+epoch 104 | train loss 0.0203 mae 11.33 r2 0.279 | val loss 0.0213 mae 11.73 r2 0.247
+epoch 105 | train loss 0.0203 mae 11.34 r2 0.279 | val loss 0.0219 mae 11.81 r2 0.227
+epoch 106 | train loss 0.0203 mae 11.33 r2 0.280 | val loss 0.0212 mae 11.63 r2 0.251
+epoch 107 | train loss 0.0203 mae 11.33 r2 0.281 | val loss 0.0215 mae 11.75 r2 0.239
+epoch 108 | train loss 0.0203 mae 11.34 r2 0.279 | val loss 0.0213 mae 11.66 r2 0.248
+epoch 109 | train loss 0.0204 mae 11.36 r2 0.277 | val loss 0.0213 mae 11.69 r2 0.247
+epoch 110 | train loss 0.0203 mae 11.34 r2 0.279 | val loss 0.0214 mae 11.72 r2 0.242
+epoch 111 | train loss 0.0203 mae 11.32 r2 0.282 | val loss 0.0214 mae 11.75 r2 0.242
+epoch 112 | train loss 0.0203 mae 11.31 r2 0.282 | val loss 0.0214 mae 11.72 r2 0.242
+epoch 113 | train loss 0.0202 mae 11.31 r2 0.282 | val loss 0.0212 mae 11.66 r2 0.250
+epoch 114 | train loss 0.0201 mae 11.29 r2 0.285 | val loss 0.0215 mae 11.73 r2 0.241
+epoch 115 | train loss 0.0202 mae 11.29 r2 0.285 | val loss 0.0217 mae 11.74 r2 0.234
+epoch 116 | train loss 0.0202 mae 11.29 r2 0.284 | val loss 0.0217 mae 11.81 r2 0.233
+epoch 117 | train loss 0.0202 mae 11.28 r2 0.285 | val loss 0.0216 mae 11.78 r2 0.238
+epoch 118 | train loss 0.0202 mae 11.29 r2 0.284 | val loss 0.0215 mae 11.72 r2 0.241
+epoch 119 | train loss 0.0202 mae 11.29 r2 0.284 | val loss 0.0215 mae 11.77 r2 0.239
+epoch 120 | train loss 0.0203 mae 11.33 r2 0.281 | val loss 0.0216 mae 11.78 r2 0.236
+epoch 121 | train loss 0.0202 mae 11.30 r2 0.283 | val loss 0.0215 mae 11.75 r2 0.240
+epoch 122 | train loss 0.0203 mae 11.32 r2 0.281 | val loss 0.0213 mae 11.69 r2 0.249
+epoch 123 | train loss 0.0203 mae 11.33 r2 0.281 | val loss 0.0213 mae 11.70 r2 0.248
+epoch 124 | train loss 0.0203 mae 11.33 r2 0.280 | val loss 0.0215 mae 11.75 r2 0.239
+epoch 125 | train loss 0.0203 mae 11.32 r2 0.281 | val loss 0.0216 mae 11.77 r2 0.237
+epoch 126 | train loss 0.0203 mae 11.33 r2 0.280 | val loss 0.0215 mae 11.75 r2 0.242
+epoch 127 | train loss 0.0204 mae 11.37 r2 0.276 | val loss 0.0217 mae 11.81 r2 0.231
+epoch 128 | train loss 0.0203 mae 11.35 r2 0.278 | val loss 0.0217 mae 11.82 r2 0.233
+epoch 129 | train loss 0.0203 mae 11.32 r2 0.281 | val loss 0.0214 mae 11.73 r2 0.244
+epoch 130 | train loss 0.0202 mae 11.31 r2 0.283 | val loss 0.0215 mae 11.76 r2 0.242
+epoch 131 | train loss 0.0203 mae 11.32 r2 0.281 | val loss 0.0214 mae 11.70 r2 0.245
+epoch 132 | train loss 0.0202 mae 11.30 r2 0.283 | val loss 0.0212 mae 11.64 r2 0.252
+epoch 133 | train loss 0.0202 mae 11.29 r2 0.284 | val loss 0.0213 mae 11.68 r2 0.247
+epoch 134 | train loss 0.0202 mae 11.31 r2 0.282 | val loss 0.0217 mae 11.85 r2 0.233
+epoch 135 | train loss 0.0204 mae 11.40 r2 0.275 | val loss 0.0214 mae 11.74 r2 0.244
+epoch 136 | train loss 0.0204 mae 11.37 r2 0.277 | val loss 0.0217 mae 11.79 r2 0.234
+epoch 137 | train loss 0.0203 mae 11.37 r2 0.278 | val loss 0.0214 mae 11.73 r2 0.242
+epoch 138 | train loss 0.0203 mae 11.33 r2 0.281 | val loss 0.0211 mae 11.63 r2 0.254
+epoch 139 | train loss 0.0202 mae 11.33 r2 0.282 | val loss 0.0214 mae 11.68 r2 0.244
+epoch 140 | train loss 0.0202 mae 11.30 r2 0.283 | val loss 0.0211 mae 11.62 r2 0.256
+epoch 141 | train loss 0.0201 mae 11.29 r2 0.285 | val loss 0.0212 mae 11.67 r2 0.250
+epoch 142 | train loss 0.0202 mae 11.30 r2 0.283 | val loss 0.0215 mae 11.77 r2 0.240
+epoch 143 | train loss 0.0202 mae 11.30 r2 0.283 | val loss 0.0213 mae 11.67 r2 0.248
+epoch 144 | train loss 0.0202 mae 11.30 r2 0.284 | val loss 0.0215 mae 11.72 r2 0.239
