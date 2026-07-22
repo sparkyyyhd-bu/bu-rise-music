@@ -65,8 +65,9 @@ def run_epoch(model, loader, criterion, mae_metric, r2_metric, optimizer = None)
                 optimizer.step()
 
             total_loss += loss.item() * mels.size(0)
-            mae_metric.update(predictions * 100, targets * 100)
-            r2_metric.update(predictions * 100, targets * 100)
+            detached_predictions = predictions.detach()
+            mae_metric.update(detached_predictions * 100, targets * 100)
+            r2_metric.update(detached_predictions * 100, targets * 100)
 
     avg_loss = total_loss / len(loader.dataset)
     return avg_loss, mae_metric.compute().item(), r2_metric.compute().item()

@@ -36,4 +36,5 @@ pip install --upgrade pip setuptools
 pip install --upgrade -r requirements.txt
 
 export PYTHONPATH="$SGE_O_WORKDIR/src:$PYTHONPATH"
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 python -u src/training/train_LSTM.py
