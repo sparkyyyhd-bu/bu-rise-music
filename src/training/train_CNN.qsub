@@ -2,11 +2,11 @@
 
 #$ -P rise-grid          # project
 #$ -N train_CNN          # job name
-#$ -l h_rt=24:00:00      # walltime, adjust as needed
-#$ -pe omp 8             # CPU cores, matches num_workers in train.py
+#$ -l h_rt=12:00:00      # walltime, adjust as needed (bumped for larger model)
+#$ -pe omp 16            # CPU cores, matches num_workers in train.py
 #$ -l gpus=1             # request 1 GPU
-#$ -l gpu_c=7.0          # min GPU compute capability
-#$ -l gpu_type=L40S      # request a specific GPU model, see `qgpus` for options
+#$ -l gpu_c=8.0          # Ampere or newer GPU
+#$ -l gpu_memory=40G     # enough VRAM for large training batches
 
 module load python3/3.10.12
 module load cuda/12.2
@@ -36,4 +36,16 @@ pip install --upgrade pip setuptools
 pip install --upgrade -r requirements.txt
 
 export PYTHONPATH="$SGE_O_WORKDIR/src:$PYTHONPATH"
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+
+# Print the best stats seen so far a bit before walltime runs out, so
+# results land in the log even if SGE kills the job mid-epoch.
+WALLTIME_SECONDS=$((12*3600))
+WARN_BUFFER_SECONDS=300
+python -u src/training/print_best_stats.py \
+    --checkpoint "/net/scc1/scratch/$USER/checkpoints/last_CNN_checkpoint.pt" \
+    --sleep-seconds $((WALLTIME_SECONDS - WARN_BUFFER_SECONDS)) &
+WATCHDOG_PID=$!
+trap 'kill "$WATCHDOG_PID" 2>/dev/null' EXIT
+
 python -u src/training/train_CNN.py
