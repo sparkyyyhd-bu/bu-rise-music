@@ -142,7 +142,7 @@ def main():
     mae_metric = MeanAbsoluteError().to(device)
     r2_metric = R2Score().to(device)
 
-    epochs = 50
+    epochs = 150
     hyperparams = {
         "batch_size": batch_size,
         "learning_rate": learning_rate,

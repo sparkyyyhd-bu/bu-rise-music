@@ -104,7 +104,7 @@ def main():
     torch.manual_seed(0)
 
     popularity_by_id = load_popularity_by_id()
-    epochs = 100
+    epochs = 150
     dataset = MelPopularityDataset(mel_dir, popularity_by_id)
 
     val_size = max(1, int(0.15 * len(dataset)))
@@ -125,14 +125,6 @@ def main():
     )
     val_loader = DataLoader(
         val_set,
-        batch_size,
-        shuffle = False,
-        num_workers = 16,
-        pin_memory = (device.type == "cuda"),
-        collate_fn = collate_fn
-    )
-    test_loader = DataLoader(
-        test_set,
         batch_size,
         shuffle = False,
         num_workers = 16,
@@ -224,13 +216,6 @@ def main():
         f"finished epoch {epoch}; best val loss {best_val_loss:.4f}; "
         f"latest checkpoint saved to {last_checkpoint_path}"
     )
-
-    best_checkpoint = torch.load(best_checkpoint_path, map_location=device, weights_only=True)
-    model.load_state_dict(best_checkpoint["model_state_dict"])
-    test_loss, test_mae, test_r2 = run_epoch(
-        model, test_loader, criterion, mae_metric, r2_metric
-    )
-    print(f"test (best model) | loss {test_loss:.4f} mae {test_mae:.2f} r2 {test_r2:.3f}")
 
 
 
