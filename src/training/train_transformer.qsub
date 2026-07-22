@@ -5,8 +5,8 @@
 #$ -l h_rt=12:00:00      # walltime, adjust as needed (bumped for larger model)
 #$ -pe omp 16            # CPU cores, matches num_workers in train.py
 #$ -l gpus=1             # request 1 GPU
-#$ -l gpu_c=7.0          # min GPU compute capability
-#$ -l gpu_type=RTXP6000     # request a specific GPU model, see `qgpus` for options
+#$ -l gpu_c=8.0          # Ampere or newer GPU
+#$ -l gpu_memory=40G     # enough VRAM for large training batches
 
 module load python3/3.10.12
 module load cuda/12.2
