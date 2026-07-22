@@ -11,6 +11,38 @@ MEL_SUFFIX = "_mel.pt"
 repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 tracks_csv = os.path.join(repo_root, "data", "SpotGenTrack", "Data Sources", "spotify_tracks.csv")
 
+
+def checkpoint_matches_model(model, checkpoint):
+    """Check state-dict keys and tensor shapes without modifying the model."""
+    if not isinstance(checkpoint, dict):
+        return False, "checkpoint is not a dictionary"
+
+    checkpoint_state = checkpoint.get("model_state_dict")
+    if not isinstance(checkpoint_state, dict):
+        return False, "checkpoint has no model_state_dict"
+
+    model_state = model.state_dict()
+    missing = sorted(model_state.keys() - checkpoint_state.keys())
+    unexpected = sorted(checkpoint_state.keys() - model_state.keys())
+    shape_mismatches = [
+        f"{name}: checkpoint {tuple(checkpoint_state[name].shape)}, "
+        f"model {tuple(model_state[name].shape)}"
+        for name in sorted(model_state.keys() & checkpoint_state.keys())
+        if checkpoint_state[name].shape != model_state[name].shape
+    ]
+
+    problems = []
+    if missing:
+        problems.append(f"missing keys: {', '.join(missing)}")
+    if unexpected:
+        problems.append(f"unexpected keys: {', '.join(unexpected)}")
+    if shape_mismatches:
+        problems.append(f"shape mismatches: {'; '.join(shape_mismatches)}")
+
+    if problems:
+        return False, " | ".join(problems)
+    return True, "all parameter keys and shapes match"
+
 class MelPopularityDataset(Dataset):
     def __init__(self, mel_dir, popularity_by_id):
         self.entries = []
@@ -52,4 +84,3 @@ def sync_to_local_scratch(source_dir, local_root):
             shutil.copy2(os.path.join(source_dir, name), os.path.join(local_dir, name))
         open(done_marker, "w").close()
     return local_dir
-

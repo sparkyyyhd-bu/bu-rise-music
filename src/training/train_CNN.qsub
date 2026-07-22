@@ -2,8 +2,8 @@
 
 #$ -P rise-grid          # project
 #$ -N train_CNN          # job name
-#$ -l h_rt=24:00:00      # walltime, adjust as needed
-#$ -pe omp 8             # CPU cores, matches num_workers in train.py
+#$ -l h_rt=48:00:00      # walltime, adjust as needed (bumped for larger model)
+#$ -pe omp 16            # CPU cores, matches num_workers in train.py
 #$ -l gpus=1             # request 1 GPU
 #$ -l gpu_c=7.0          # min GPU compute capability
 #$ -l gpu_type=L40S      # request a specific GPU model, see `qgpus` for options

@@ -5,7 +5,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import random_split, DataLoader
 from torchmetrics import MeanAbsoluteError, R2Score
-from training.data_utils import MelPopularityDataset, load_popularity_by_id, sync_to_local_scratch
+from training.data_utils import (
+    MelPopularityDataset,
+    checkpoint_matches_model,
+    load_popularity_by_id,
+    sync_to_local_scratch,
+)
 
 if torch.cuda.is_available():
     device = torch.device("cuda")
@@ -26,24 +31,28 @@ mel_dir = sync_to_local_scratch(network_mel_dir, local_scratch_dir)
 class PopularityCNN(nn.Module):
     def __init__(self):
         super().__init__()
-        self.conv1 = nn.Conv2d(1, 16, kernel_size=3, padding=1)
-        self.conv2 = nn.Conv2d(16, 32, kernel_size=3, padding=1)
-        self.conv3 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
+        self.conv1 = nn.Conv2d(1, 64, kernel_size=3, padding=1)
+        self.conv2 = nn.Conv2d(64, 128, kernel_size=3, padding=1)
+        self.conv3 = nn.Conv2d(128, 256, kernel_size=3, padding=1)
+        self.conv4 = nn.Conv2d(256, 512, kernel_size=3, padding=1)
         self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
         # Summarize to a fixed size regardless of spectrogram length.
         self.global_pool = nn.AdaptiveAvgPool2d((4, 4))
-        self.fc1 = nn.Linear(64 * 4 * 4, 128)
-        self.fc2 = nn.Linear(128, 1)
+        self.fc1 = nn.Linear(512 * 4 * 4, 2048)
+        self.fc2 = nn.Linear(2048, 256)
+        self.fc3 = nn.Linear(256, 1)
         self.dropout = nn.Dropout(0.3)
 
     def forward(self, x):
         x = self.pool(F.relu(self.conv1(x)))
         x = self.pool(F.relu(self.conv2(x)))
         x = self.pool(F.relu(self.conv3(x)))
+        x = self.pool(F.relu(self.conv4(x)))
         x = self.global_pool(x)
         x = x.flatten(1)
         x = self.dropout(F.relu(self.fc1(x)))
-        x = torch.sigmoid(self.fc2(x))  # popularity normalized to [0, 1]
+        x = self.dropout(F.relu(self.fc2(x)))
+        x = torch.sigmoid(self.fc3(x))  # popularity normalized to [0, 1]
         return x.squeeze(1)
 
 
@@ -100,12 +109,12 @@ def main():
         generator=torch.Generator().manual_seed(0),
     )
 
-    batch_size = 16
+    batch_size = 128
     train_loader = DataLoader(
         train_set,
         batch_size=batch_size,
         shuffle=True,
-        num_workers=8,
+        num_workers=16,
         pin_memory=(device.type == "cuda"),
         collate_fn=collate_fn,
     )
@@ -113,18 +122,26 @@ def main():
         val_set,
         batch_size=batch_size,
         shuffle=False,
-        num_workers=8,
+        num_workers=16,
         pin_memory=(device.type == "cuda"),
         collate_fn=collate_fn,
     )
 
     model = PopularityCNN().to(device)
     criterion = nn.MSELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+    learning_rate = 1e-3
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     mae_metric = MeanAbsoluteError().to(device)
     r2_metric = R2Score().to(device)
 
     epochs = 50
+    hyperparams = {
+        "batch_size": batch_size,
+        "learning_rate": learning_rate,
+        "epochs": epochs,
+        "conv_channels": [64, 128, 256, 512],
+        "fc_dims": [2048, 256],
+    }
     last_checkpoint_path = os.path.join(checkpoint_dir, "last_CNN_checkpoint.pt")
     best_checkpoint_path = os.path.join(checkpoint_dir, "best_CNN_model.pt")
     start_epoch = 0
@@ -134,14 +151,29 @@ def main():
         checkpoint = torch.load(
             last_checkpoint_path, map_location=device, weights_only=True
         )
-        model.load_state_dict(checkpoint["model_state_dict"])
-        optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-        start_epoch = checkpoint["epoch"]
-        best_val_loss = checkpoint["best_val_loss"]
-        print(
-            f"continuing from epoch {start_epoch} in {last_checkpoint_path}",
-            flush=True,
-        )
+        compatible, reason = checkpoint_matches_model(model, checkpoint)
+        if compatible:
+            model.load_state_dict(checkpoint["model_state_dict"])
+            try:
+                optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+            except (KeyError, ValueError, RuntimeError) as e:
+                print(f"could not restore optimizer state; using a new optimizer ({e})")
+            start_epoch = checkpoint["epoch"]
+            best_val_loss = checkpoint["best_val_loss"]
+            # Older checkpoints predate hyperparameter logging; assume the
+            # hyperparameters currently set in this script were used.
+            hyperparams = checkpoint.get("hyperparams", hyperparams)
+            print(
+                f"continuing from epoch {start_epoch} in {last_checkpoint_path}",
+                flush=True,
+            )
+            print(f"hyperparameters: {hyperparams}", flush=True)
+        else:
+            print(
+                f"checkpoint at {last_checkpoint_path} doesn't match the current "
+                f"model architecture ({reason}); starting fresh with the new architecture",
+                flush=True,
+            )
 
     for epoch in range(start_epoch + 1, start_epoch + epochs + 1):
         train_loss, train_mae, train_r2 = run_epoch(
@@ -168,6 +200,7 @@ def main():
             "model_state_dict": model.state_dict(),
             "optimizer_state_dict": optimizer.state_dict(),
             "best_val_loss": best_val_loss,
+            "hyperparams": hyperparams,
         }
         torch.save(checkpoint, last_checkpoint_path)
         if is_best:

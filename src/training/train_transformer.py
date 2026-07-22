@@ -1,6 +1,11 @@
 import torch
 import torch.nn as nn
-from training.data_utils import sync_to_local_scratch, MelPopularityDataset, load_popularity_by_id
+from training.data_utils import (
+    MelPopularityDataset,
+    checkpoint_matches_model,
+    load_popularity_by_id,
+    sync_to_local_scratch,
+)
 import os
 from torch.utils.data import random_split, DataLoader
 import torch.nn.functional as F
@@ -19,13 +24,17 @@ os.makedirs(checkpoint_dir, exist_ok=True)
 mel_dir = sync_to_local_scratch(network_mel_dir, local_scratch_dir)
 
 
+D_MODEL = 768
+
+
 class PopularityTransformer(nn.Module):
     def __init__(self):
         super().__init__()
+        self.input_proj = nn.Linear(N_MELS, D_MODEL)
         encoder_layer = nn.TransformerEncoderLayer(
-            d_model = N_MELS,
+            d_model = D_MODEL,
             nhead = 8,
-            dim_feedforward=320,
+            dim_feedforward=3072,
             batch_first=True,
             activation='gelu'
         )
@@ -34,11 +43,12 @@ class PopularityTransformer(nn.Module):
             num_layers=6
         )
         self.position_embedding = nn.Parameter(
-            torch.randn(1, MAX_FRAMES, N_MELS) * 0.02
+            torch.randn(1, MAX_FRAMES, D_MODEL) * 0.02
         )
-        self.fc = nn.Linear(N_MELS, 1)
-    
+        self.fc = nn.Linear(D_MODEL, 1)
+
     def forward(self,x):
+        x = self.input_proj(x)
         positions = self.position_embedding[:,:x.shape[1],:]
         x = x + positions
         x = self.encoder(x)
@@ -101,12 +111,12 @@ def main():
     train_size = len(dataset) - val_size - test_size
     train_set, val_set, test_set = random_split(dataset, [train_size, val_size, test_size])
 
-    batch_size = 16
+    batch_size = 128
     train_loader = DataLoader(
         train_set,
         batch_size,
         shuffle = True,
-        num_workers = 8,
+        num_workers = 16,
         pin_memory = (device.type == "cuda"),
         collate_fn = collate_fn
     )
@@ -114,7 +124,7 @@ def main():
         val_set,
         batch_size,
         shuffle = False,
-        num_workers = 8,
+        num_workers = 16,
         pin_memory = (device.type == "cuda"),
         collate_fn = collate_fn
     )
@@ -122,16 +132,26 @@ def main():
         test_set,
         batch_size,
         shuffle = False,
-        num_workers = 8,
+        num_workers = 16,
         pin_memory = (device.type == "cuda"),
         collate_fn = collate_fn
     )
     model = PopularityTransformer().to(device)
     criterion = nn.MSELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+    learning_rate = 1e-3
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     mae_metric = MeanAbsoluteError().to(device)
     r2_metric = R2Score().to(device)
 
+    hyperparams = {
+        "batch_size": batch_size,
+        "learning_rate": learning_rate,
+        "epochs": epochs,
+        "d_model": D_MODEL,
+        "nhead": 8,
+        "dim_feedforward": 3072,
+        "num_layers": 6,
+    }
     last_checkpoint_path = os.path.join(checkpoint_dir, "last_transformer_checkpoint.pt")
     best_checkpoint_path = os.path.join(checkpoint_dir, "best_transformer_model.pt")
     start_epoch = 0
@@ -141,14 +161,29 @@ def main():
         checkpoint = torch.load(
             last_checkpoint_path, map_location=device, weights_only=True
         )
-        model.load_state_dict(checkpoint["model_state_dict"])
-        optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-        start_epoch = checkpoint["epoch"]
-        best_val_loss = checkpoint["best_val_loss"]
-        print(
-            f"continuing from epoch {start_epoch} in {last_checkpoint_path}",
-            flush=True,
-        )
+        compatible, reason = checkpoint_matches_model(model, checkpoint)
+        if compatible:
+            model.load_state_dict(checkpoint["model_state_dict"])
+            try:
+                optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+            except (KeyError, ValueError, RuntimeError) as e:
+                print(f"could not restore optimizer state; using a new optimizer ({e})")
+            start_epoch = checkpoint["epoch"]
+            best_val_loss = checkpoint["best_val_loss"]
+            # Older checkpoints predate hyperparameter logging; assume the
+            # hyperparameters currently set in this script were used.
+            hyperparams = checkpoint.get("hyperparams", hyperparams)
+            print(
+                f"continuing from epoch {start_epoch} in {last_checkpoint_path}",
+                flush=True,
+            )
+            print(f"hyperparameters: {hyperparams}", flush=True)
+        else:
+            print(
+                f"checkpoint at {last_checkpoint_path} doesn't match the current "
+                f"model architecture ({reason}); starting fresh with the new architecture",
+                flush=True,
+            )
     
     epoch = start_epoch
     for epoch in range(start_epoch+1,epochs+1):
@@ -176,6 +211,7 @@ def main():
             "model_state_dict": model.state_dict(),
             "optimizer_state_dict": optimizer.state_dict(),
             "best_val_loss": best_val_loss,
+            "hyperparams": hyperparams,
         }
         torch.save(checkpoint, last_checkpoint_path)
         if is_best:
