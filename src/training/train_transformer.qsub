@@ -6,7 +6,7 @@
 #$ -pe omp 16            # CPU cores, matches num_workers in train.py
 #$ -l gpus=1             # request 1 GPU
 #$ -l gpu_c=8.0          # Ampere or newer GPU
-#$ -l gpu_memory=40G     # enough VRAM for large training batches
+#$ -l gpu_memory=80G     # target H200, RTXP6000, or A100-80G-class GPUs
 
 module load python3/3.10.12
 module load cuda/12.2
