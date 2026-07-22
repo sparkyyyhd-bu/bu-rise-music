@@ -112,9 +112,9 @@ def main():
     train_size = len(dataset) - val_size - test_size
     train_set, val_set, test_set = random_split(dataset, [train_size, val_size, test_size])
 
-    # Lowered from 128 now that the model is much larger, to keep activation
-    # memory in check (attention + feedforward memory scale with d_model).
-    batch_size = 64
+    # Long sequences and the wide feed-forward layers create large saved
+    # activations during training, so keep the per-GPU batch conservative.
+    batch_size = 8
     train_loader = DataLoader(
         train_set,
         batch_size,

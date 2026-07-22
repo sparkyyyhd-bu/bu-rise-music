@@ -110,7 +110,9 @@ def main():
         generator=torch.Generator().manual_seed(0),
     )
 
-    batch_size = 128
+    # Early convolutional feature maps retain the full spectrogram resolution
+    # and are large during backpropagation.
+    batch_size = 32
     train_loader = DataLoader(
         train_set,
         batch_size=batch_size,
