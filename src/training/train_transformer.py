@@ -24,7 +24,7 @@ os.makedirs(checkpoint_dir, exist_ok=True)
 mel_dir = sync_to_local_scratch(network_mel_dir, local_scratch_dir)
 
 
-D_MODEL = 768
+D_MODEL = 1280
 
 
 class PopularityTransformer(nn.Module):
@@ -34,13 +34,13 @@ class PopularityTransformer(nn.Module):
         encoder_layer = nn.TransformerEncoderLayer(
             d_model = D_MODEL,
             nhead = 8,
-            dim_feedforward=3072,
+            dim_feedforward=5120,
             batch_first=True,
             activation='gelu'
         )
         self.encoder = nn.TransformerEncoder(
             encoder_layer,
-            num_layers=6
+            num_layers=8
         )
         self.position_embedding = nn.Parameter(
             torch.randn(1, MAX_FRAMES, D_MODEL) * 0.02
@@ -112,7 +112,9 @@ def main():
     train_size = len(dataset) - val_size - test_size
     train_set, val_set, test_set = random_split(dataset, [train_size, val_size, test_size])
 
-    batch_size = 128
+    # Lowered from 128 now that the model is much larger, to keep activation
+    # memory in check (attention + feedforward memory scale with d_model).
+    batch_size = 64
     train_loader = DataLoader(
         train_set,
         batch_size,
@@ -150,8 +152,8 @@ def main():
         "epochs": epochs,
         "d_model": D_MODEL,
         "nhead": 8,
-        "dim_feedforward": 3072,
-        "num_layers": 6,
+        "dim_feedforward": 5120,
+        "num_layers": 8,
     }
     last_checkpoint_path = os.path.join(checkpoint_dir, "last_transformer_checkpoint.pt")
     best_checkpoint_path = os.path.join(checkpoint_dir, "best_transformer_model.pt")
