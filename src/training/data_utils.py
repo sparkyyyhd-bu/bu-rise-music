@@ -63,6 +63,7 @@ class MelPopularityDataset(Dataset):
         mel = torch.load(path)
         if mel.dim() == 3:
             mel = mel.mean(dim=0)  # collapse stereo channels to mono
+        mel = (mel - mel.mean()) / (mel.std() + 1e-5)
         target = torch.tensor(popularity / 100.0, dtype=torch.float32)
         return mel, target
     

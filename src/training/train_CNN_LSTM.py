@@ -29,9 +29,13 @@ class PopularityCNNLSTM(nn.Module):
         # Pool only along the frequency axis so the time dimension stays
         # intact for the LSTM to run over.
         self.conv1 = nn.Conv2d(1, 32, kernel_size=3, padding=1)
+        self.bn1 = nn.BatchNorm2d(32)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
+        self.bn2 = nn.BatchNorm2d(64)
         self.conv3 = nn.Conv2d(64, 128, kernel_size=3, padding=1)
+        self.bn3 = nn.BatchNorm2d(128)
         self.conv4 = nn.Conv2d(128, 256, kernel_size=3, padding=1)
+        self.bn4 = nn.BatchNorm2d(256)
         self.pool = nn.MaxPool2d(kernel_size=(2, 1), stride=(2, 1))
         self.lstm = nn.LSTM(
             input_size=256 * 8,  # 128 mel bins halved 4 times, times 256 channels
@@ -45,10 +49,10 @@ class PopularityCNNLSTM(nn.Module):
         self.dropout = nn.Dropout(0.3)
 
     def forward(self, x):
-        x = self.pool(F.relu(self.conv1(x)))
-        x = self.pool(F.relu(self.conv2(x)))
-        x = self.pool(F.relu(self.conv3(x)))
-        x = self.pool(F.relu(self.conv4(x)))  # (B, C, F, T)
+        x = self.pool(F.relu(self.bn1(self.conv1(x))))
+        x = self.pool(F.relu(self.bn2(self.conv2(x))))
+        x = self.pool(F.relu(self.bn3(self.conv3(x))))
+        x = self.pool(F.relu(self.bn4(self.conv4(x))))  # (B, C, F, T)
         x = x.permute(0, 3, 1, 2)  # (B, T, C, F)
         x = x.flatten(2)  # (B, T, C * F)
         _, (hidden, _) = self.lstm(x)
