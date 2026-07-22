@@ -9,6 +9,7 @@ import os
 from torch.utils.data import random_split, DataLoader
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.optim.lr_scheduler import LambdaLR, ReduceLROnPlateau
 from torchmetrics import MeanAbsoluteError, R2Score
 
 
@@ -44,7 +45,7 @@ class PopularityLSTM(nn.Module):
         x = torch.sigmoid(self.fc2(x))
         return x.squeeze(1)
 
-def run_epoch(model, loader, criterion, mae_metric, r2_metric, optimizer = None):
+def run_epoch(model, loader, criterion, mae_metric, r2_metric, optimizer = None, warmup_scheduler = None):
     is_train = optimizer is not None
     model.train(is_train)
     mae_metric.reset()
@@ -55,7 +56,7 @@ def run_epoch(model, loader, criterion, mae_metric, r2_metric, optimizer = None)
         for mels, targets in loader:
             mels = mels.to(device, non_blocking=True)
             targets = targets.to(device, non_blocking=True)
-            
+
             predictions = model(mels)
             loss = criterion(predictions, targets)
             if is_train:
@@ -63,6 +64,8 @@ def run_epoch(model, loader, criterion, mae_metric, r2_metric, optimizer = None)
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
                 optimizer.step()
+                if warmup_scheduler is not None:
+                    warmup_scheduler.step()
 
             total_loss += loss.item() * mels.size(0)
             detached_predictions = predictions.detach()
@@ -118,6 +121,12 @@ def main():
     criterion = nn.MSELoss()
     learning_rate = 1e-3
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    scheduler = ReduceLROnPlateau(optimizer, mode="min", factor=0.5, patience=5)
+    warmup_epochs = 3
+    warmup_steps = max(1, warmup_epochs * len(train_loader))
+    warmup_scheduler = LambdaLR(
+        optimizer, lr_lambda=lambda step: min(1.0, (step + 1) / warmup_steps)
+    )
     mae_metric = MeanAbsoluteError().to(device)
     r2_metric = R2Score().to(device)
 
@@ -129,6 +138,7 @@ def main():
         "hidden_size": 1536,
         "num_layers": 3,
         "fc_dims": [384],
+        "warmup_epochs": warmup_epochs,
     }
     last_checkpoint_path = os.path.join(checkpoint_dir, "last_LSTM_checkpoint.pt")
     best_checkpoint_path = os.path.join(checkpoint_dir, "best_LSTM_model.pt")
@@ -146,6 +156,14 @@ def main():
                 optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
             except (KeyError, ValueError, RuntimeError) as e:
                 print(f"could not restore optimizer state; using a new optimizer ({e})")
+            try:
+                scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
+            except (KeyError, ValueError, RuntimeError) as e:
+                print(f"could not restore scheduler state; using a new scheduler ({e})")
+            try:
+                warmup_scheduler.load_state_dict(checkpoint["warmup_scheduler_state_dict"])
+            except (KeyError, ValueError, RuntimeError) as e:
+                print(f"could not restore warmup scheduler state; using a new warmup scheduler ({e})")
             start_epoch = checkpoint["epoch"]
             best_val_loss = checkpoint["best_val_loss"]
             # Older checkpoints predate hyperparameter logging; assume the
@@ -165,7 +183,8 @@ def main():
 
     for epoch in range(start_epoch + 1, start_epoch + epochs + 1):
         train_loss, train_mae, train_r2 = run_epoch(
-            model, train_loader, criterion, mae_metric, r2_metric, optimizer
+            model, train_loader, criterion, mae_metric, r2_metric, optimizer,
+            warmup_scheduler if epoch <= warmup_epochs else None,
         )
         val_loss, val_mae, val_r2 = run_epoch(
             model, val_loader, criterion, mae_metric, r2_metric
@@ -175,6 +194,9 @@ def main():
             f"train loss {train_loss:.4f} mae {train_mae:.2f} r2 {train_r2:.3f} | "
             f"val loss {val_loss:.4f} mae {val_mae:.2f} r2 {val_r2:.3f}"
         )
+
+        if epoch > warmup_epochs:
+            scheduler.step(val_loss)
 
         if val_loss < best_val_loss:
             best_val_loss = val_loss
@@ -186,6 +208,8 @@ def main():
             "epoch": epoch,
             "model_state_dict": model.state_dict(),
             "optimizer_state_dict": optimizer.state_dict(),
+            "scheduler_state_dict": scheduler.state_dict(),
+            "warmup_scheduler_state_dict": warmup_scheduler.state_dict(),
             "best_val_loss": best_val_loss,
             "hyperparams": hyperparams,
         }
