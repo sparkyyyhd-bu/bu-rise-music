@@ -12,6 +12,7 @@ from training.data_utils import (
     MelPopularityDataset,
     checkpoint_matches_model,
     load_popularity_by_id,
+    spec_augment,
     sync_to_local_scratch,
 )
 
@@ -20,20 +21,17 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class PatchEmbedding(nn.Module):
-    """Turn a mel spectrogram into a sequence of non-overlapping 2-D patches."""
+    """Turn a mel spectrogram into a sequence of overlapping 2-D patches."""
 
-    def __init__(self, patch_size=(16, 32), embed_dim=256):
+    def __init__(self, patch_size=(16, 16), patch_stride=(10, 10), embed_dim=768):
         super().__init__()
         self.patch_size = patch_size
+        self.patch_stride = patch_stride
         self.projection = nn.Conv2d(
-            1, embed_dim, kernel_size=patch_size, stride=patch_size
+            1, embed_dim, kernel_size=patch_size, stride=patch_stride
         )
 
     def forward(self, x):
-        frequency_pad = (-x.shape[-2]) % self.patch_size[0]
-        time_pad = (-x.shape[-1]) % self.patch_size[1]
-        if frequency_pad or time_pad:
-            x = F.pad(x, (0, time_pad, 0, frequency_pad))
         x = self.projection(x)
         return x.flatten(2).transpose(1, 2)
 
@@ -44,20 +42,21 @@ class PopularityViT(nn.Module):
     def __init__(
         self,
         image_size=(N_MELS, MAX_FRAMES),
-        patch_size=(16, 32),
-        embed_dim=256,
-        num_heads=8,
-        num_layers=4,
-        mlp_dim=1024,
+        patch_size=(16, 16),
+        patch_stride=(10, 10),
+        embed_dim=768,
+        num_heads=12,
+        num_layers=12,
+        mlp_dim=3072,
         dropout=0.1,
     ):
         super().__init__()
         if embed_dim % num_heads != 0:
             raise ValueError("embed_dim must be divisible by num_heads")
 
-        self.patch_embedding = PatchEmbedding(patch_size, embed_dim)
-        grid_height = (image_size[0] + patch_size[0] - 1) // patch_size[0]
-        grid_width = (image_size[1] + patch_size[1] - 1) // patch_size[1]
+        self.patch_embedding = PatchEmbedding(patch_size, patch_stride, embed_dim)
+        grid_height = 1 + (image_size[0] - patch_size[0]) // patch_stride[0]
+        grid_width = 1 + (image_size[1] - patch_size[1]) // patch_stride[1]
         num_patches = grid_height * grid_width
 
         self.class_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
@@ -138,6 +137,8 @@ def run_epoch(
         for mels, targets in loader:
             mels = mels.to(device, non_blocking=True)
             targets = targets.to(device, non_blocking=True)
+            if is_train:
+                mels = spec_augment(mels, frequency_dim=2, time_dim=3)
             predictions = model(mels)
             loss = criterion(predictions, targets)
 
@@ -223,21 +224,21 @@ def main():
     r2_metric = R2Score().to(device)
 
     epochs = 60
-    early_stopping_patience = 8
     hyperparams = {
         "batch_size": batch_size,
         "learning_rate": learning_rate,
         "weight_decay": 1e-4,
         "epochs": epochs,
         "image_size": [N_MELS, MAX_FRAMES],
-        "patch_size": [16, 32],
-        "embed_dim": 256,
-        "num_heads": 8,
-        "num_layers": 4,
-        "mlp_dim": 1024,
+        "patch_size": [16, 16],
+        "patch_stride": [10, 10],
+        "patch_overlap": [6, 6],
+        "embed_dim": 768,
+        "num_heads": 12,
+        "num_layers": 12,
+        "mlp_dim": 3072,
         "dropout": 0.1,
         "warmup_epochs": warmup_epochs,
-        "early_stopping_patience": early_stopping_patience,
     }
     last_checkpoint_path = os.path.join(
         checkpoint_dir, "last_ViT_checkpoint.pt"
@@ -245,7 +246,6 @@ def main():
     best_checkpoint_path = os.path.join(checkpoint_dir, "best_ViT_model.pt")
     start_epoch = 0
     best_val_loss = float("inf")
-    epochs_without_improvement = 0
 
     if os.path.exists(last_checkpoint_path):
         checkpoint = torch.load(
@@ -306,9 +306,6 @@ def main():
         is_best = val_loss < best_val_loss
         if is_best:
             best_val_loss = val_loss
-            epochs_without_improvement = 0
-        else:
-            epochs_without_improvement += 1
 
         checkpoint = {
             "epoch": epoch,
@@ -322,13 +319,6 @@ def main():
         torch.save(checkpoint, last_checkpoint_path)
         if is_best:
             torch.save(checkpoint, best_checkpoint_path)
-        if epochs_without_improvement >= early_stopping_patience:
-            print(
-                f"early stopping after {early_stopping_patience} epochs "
-                "without validation improvement",
-                flush=True,
-            )
-            break
 
     print(
         f"finished epoch {epoch}; best val loss {best_val_loss:.4f}; "

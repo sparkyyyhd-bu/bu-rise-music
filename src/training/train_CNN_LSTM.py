@@ -4,6 +4,7 @@ from training.data_utils import (
     MelPopularityDataset,
     checkpoint_matches_model,
     load_popularity_by_id,
+    spec_augment,
     sync_to_local_scratch,
 )
 import os
@@ -77,6 +78,8 @@ def run_epoch(model, loader, criterion, mae_metric, r2_metric, optimizer=None, w
             mels = mels.to(device, non_blocking=True)
             targets = targets.to(device, non_blocking=True)
 
+            if is_train:
+                mels = spec_augment(mels, frequency_dim=2, time_dim=3)
             predictions = model(mels)
             loss = criterion(predictions, targets)
             if is_train:
@@ -172,7 +175,6 @@ def main():
     r2_metric = R2Score().to(device)
 
     epochs = 60
-    early_stopping_patience = 8
     hyperparams = {
         "batch_size": batch_size,
         "learning_rate": learning_rate,
@@ -184,13 +186,11 @@ def main():
         "num_layers": 2,
         "fc_dims": [128],
         "warmup_epochs": warmup_epochs,
-        "early_stopping_patience": early_stopping_patience,
     }
     last_checkpoint_path = os.path.join(checkpoint_dir, "last_CNN_LSTM_checkpoint.pt")
     best_checkpoint_path = os.path.join(checkpoint_dir, "best_CNN_LSTM_model.pt")
     start_epoch = 0
     best_val_loss = float("inf")
-    epochs_without_improvement = 0
 
     if os.path.exists(last_checkpoint_path):
         checkpoint = torch.load(
@@ -252,10 +252,8 @@ def main():
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             is_best = True
-            epochs_without_improvement = 0
         else:
             is_best = False
-            epochs_without_improvement += 1
 
         checkpoint = {
             "epoch": epoch,
@@ -269,13 +267,6 @@ def main():
         torch.save(checkpoint, last_checkpoint_path)
         if is_best:
             torch.save(checkpoint, best_checkpoint_path)
-        if epochs_without_improvement >= early_stopping_patience:
-            print(
-                f"early stopping after {early_stopping_patience} epochs "
-                "without validation improvement",
-                flush=True,
-            )
-            break
 
     print(
         f"finished epoch {epoch}; best val loss {best_val_loss:.4f}; "

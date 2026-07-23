@@ -4,6 +4,7 @@ from training.data_utils import (
     MelPopularityDataset,
     checkpoint_matches_model,
     load_popularity_by_id,
+    spec_augment,
     sync_to_local_scratch,
 )
 import os
@@ -85,6 +86,8 @@ def run_epoch(model, loader, criterion, mae_metric, r2_metric, optimizer = None,
             mels = mels.to(device, non_blocking = True)
             targets = targets.to(device, non_blocking = True)
 
+            if is_train:
+                mels = spec_augment(mels, frequency_dim=2, time_dim=1)
             predictions = model(mels)
             loss = criterion(predictions, targets)
             if is_train:
@@ -194,8 +197,6 @@ def main():
         "num_layers": 4,
         "warmup_epochs": warmup_epochs,
     }
-    early_stopping_patience = 8
-    epochs_without_improvement = 0
     last_checkpoint_path = os.path.join(checkpoint_dir, "last_transformer_checkpoint.pt")
     best_checkpoint_path = os.path.join(checkpoint_dir, "best_transformer_model.pt")
     start_epoch = 0
@@ -262,10 +263,8 @@ def main():
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             is_best = True
-            epochs_without_improvement = 0
         else:
             is_best = False
-            epochs_without_improvement += 1
 
         checkpoint = {
             "epoch": epoch,
@@ -279,13 +278,6 @@ def main():
         torch.save(checkpoint, last_checkpoint_path)
         if is_best:
             torch.save(checkpoint, best_checkpoint_path)
-        if epochs_without_improvement >= early_stopping_patience:
-            print(
-                f"early stopping after {early_stopping_patience} epochs "
-                "without validation improvement",
-                flush=True,
-            )
-            break
 
     print(
         f"finished epoch {epoch}; best val loss {best_val_loss:.4f}; "

@@ -2,6 +2,7 @@ from training.data_utils import (
     MelPopularityDataset,
     checkpoint_matches_model,
     load_popularity_by_id,
+    spec_augment,
     sync_to_local_scratch,
 )
 import torch
@@ -57,6 +58,8 @@ def run_epoch(model, loader, criterion, mae_metric, r2_metric, optimizer = None,
             mels = mels.to(device, non_blocking=True)
             targets = targets.to(device, non_blocking=True)
 
+            if is_train:
+                mels = spec_augment(mels, frequency_dim=2, time_dim=1)
             predictions = model(mels)
             loss = criterion(predictions, targets)
             if is_train:

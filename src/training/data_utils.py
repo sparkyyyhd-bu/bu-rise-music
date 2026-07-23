@@ -12,6 +12,72 @@ repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__fi
 tracks_csv = os.path.join(repo_root, "data", "SpotGenTrack", "Data Sources", "spotify_tracks.csv")
 
 
+def spec_augment(
+    mels,
+    frequency_dim,
+    time_dim,
+    probability=0.8,
+    max_frequency_width=10,
+    max_time_width=80,
+):
+    """Apply independent frequency and time masks to each training example.
+
+    Mel spectrograms are standardized to approximately zero mean, so zero is a
+    neutral mask value. Call this only for training batches.
+    """
+    if mels.ndim < 3:
+        raise ValueError("expected a batched mel spectrogram with at least 3 dimensions")
+
+    frequency_dim %= mels.ndim
+    time_dim %= mels.ndim
+    if frequency_dim in (0, time_dim) or time_dim == 0:
+        raise ValueError("batch, frequency, and time dimensions must be distinct")
+
+    augmented = mels.clone()
+    frequency_size = augmented.shape[frequency_dim]
+    time_size = augmented.shape[time_dim]
+    device = augmented.device
+
+    for batch_index in range(augmented.shape[0]):
+        if torch.rand((), device=device) >= probability:
+            continue
+
+        frequency_width = int(
+            torch.randint(
+                0, min(max_frequency_width, frequency_size) + 1, (), device=device
+            ).item()
+        )
+        time_width = int(
+            torch.randint(
+                0, min(max_time_width, time_size) + 1, (), device=device
+            ).item()
+        )
+
+        index = [slice(None)] * augmented.ndim
+        index[0] = batch_index
+
+        if frequency_width:
+            frequency_start = int(
+                torch.randint(
+                    0, frequency_size - frequency_width + 1, (), device=device
+                ).item()
+            )
+            index[frequency_dim] = slice(
+                frequency_start, frequency_start + frequency_width
+            )
+            augmented[tuple(index)] = 0.0
+            index[frequency_dim] = slice(None)
+
+        if time_width:
+            time_start = int(
+                torch.randint(0, time_size - time_width + 1, (), device=device).item()
+            )
+            index[time_dim] = slice(time_start, time_start + time_width)
+            augmented[tuple(index)] = 0.0
+
+    return augmented
+
+
 def checkpoint_matches_model(model, checkpoint):
     """Check state-dict keys and tensor shapes without modifying the model."""
     if not isinstance(checkpoint, dict):
