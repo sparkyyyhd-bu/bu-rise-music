@@ -22,7 +22,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class PatchEmbedding(nn.Module):
     """Turn a mel spectrogram into a sequence of non-overlapping 2-D patches."""
 
-    def __init__(self, patch_size=(16, 32), embed_dim=512):
+    def __init__(self, patch_size=(16, 32), embed_dim=256):
         super().__init__()
         self.patch_size = patch_size
         self.projection = nn.Conv2d(
@@ -45,10 +45,10 @@ class PopularityViT(nn.Module):
         self,
         image_size=(N_MELS, MAX_FRAMES),
         patch_size=(16, 32),
-        embed_dim=768,
-        num_heads=12,
-        num_layers=12,
-        mlp_dim=3072,
+        embed_dim=256,
+        num_heads=8,
+        num_layers=4,
+        mlp_dim=1024,
         dropout=0.1,
     ):
         super().__init__()
@@ -101,7 +101,7 @@ class PopularityViT(nn.Module):
         x = torch.cat((class_token, x), dim=1)
         x = self.embedding_dropout(x + self.position_embedding)
         x = self.encoder(x)
-        return torch.sigmoid(self.head(x[:, 0])).squeeze(1)
+        return self.head(x[:, 0]).squeeze(1)
 
 
 def to_max_frames(mel):
@@ -130,6 +130,9 @@ def run_epoch(
     mae_metric.reset()
     r2_metric.reset()
     total_loss = 0.0
+    prediction_sum = 0.0
+    prediction_squared_sum = 0.0
+    prediction_count = 0
 
     with torch.set_grad_enabled(is_train):
         for mels, targets in loader:
@@ -148,11 +151,24 @@ def run_epoch(
 
             total_loss += loss.item() * mels.size(0)
             predictions = predictions.detach()
+            prediction_sum += predictions.sum().item()
+            prediction_squared_sum += predictions.square().sum().item()
+            prediction_count += predictions.numel()
             mae_metric.update(predictions * 100, targets * 100)
             r2_metric.update(predictions * 100, targets * 100)
 
     average_loss = total_loss / len(loader.dataset)
-    return average_loss, mae_metric.compute().item(), r2_metric.compute().item()
+    prediction_mean = prediction_sum / prediction_count
+    prediction_variance = max(
+        0.0, prediction_squared_sum / prediction_count - prediction_mean**2
+    )
+    return (
+        average_loss,
+        mae_metric.compute().item(),
+        r2_metric.compute().item(),
+        prediction_mean * 100,
+        prediction_variance**0.5 * 100,
+    )
 
 
 def main():
@@ -179,8 +195,7 @@ def main():
         generator=torch.Generator().manual_seed(0),
     )
 
-    # ViT-Base's twelve wide attention blocks retain large token activations.
-    batch_size = 4
+    batch_size = 32
     loader_options = {
         "batch_size": batch_size,
         "num_workers": 16,
@@ -194,7 +209,7 @@ def main():
     criterion = nn.MSELoss()
     learning_rate = 1e-4
     optimizer = torch.optim.AdamW(
-        model.parameters(), lr=learning_rate, weight_decay=0.05
+        model.parameters(), lr=learning_rate, weight_decay=1e-4
     )
     scheduler = ReduceLROnPlateau(
         optimizer, mode="min", factor=0.5, patience=5
@@ -207,20 +222,22 @@ def main():
     mae_metric = MeanAbsoluteError().to(device)
     r2_metric = R2Score().to(device)
 
-    epochs = 150
+    epochs = 60
+    early_stopping_patience = 8
     hyperparams = {
         "batch_size": batch_size,
         "learning_rate": learning_rate,
-        "weight_decay": 0.05,
+        "weight_decay": 1e-4,
         "epochs": epochs,
         "image_size": [N_MELS, MAX_FRAMES],
         "patch_size": [16, 32],
-        "embed_dim": 768,
-        "num_heads": 12,
-        "num_layers": 12,
-        "mlp_dim": 3072,
+        "embed_dim": 256,
+        "num_heads": 8,
+        "num_layers": 4,
+        "mlp_dim": 1024,
         "dropout": 0.1,
         "warmup_epochs": warmup_epochs,
+        "early_stopping_patience": early_stopping_patience,
     }
     last_checkpoint_path = os.path.join(
         checkpoint_dir, "last_ViT_checkpoint.pt"
@@ -228,6 +245,7 @@ def main():
     best_checkpoint_path = os.path.join(checkpoint_dir, "best_ViT_model.pt")
     start_epoch = 0
     best_val_loss = float("inf")
+    epochs_without_improvement = 0
 
     if os.path.exists(last_checkpoint_path):
         checkpoint = torch.load(
@@ -262,7 +280,7 @@ def main():
 
     epoch = start_epoch
     for epoch in range(start_epoch + 1, epochs + 1):
-        train_loss, train_mae, train_r2 = run_epoch(
+        train_loss, train_mae, train_r2, train_pred_mean, train_pred_std = run_epoch(
             model,
             train_loader,
             criterion,
@@ -271,13 +289,15 @@ def main():
             optimizer,
             warmup_scheduler if epoch <= warmup_epochs else None,
         )
-        val_loss, val_mae, val_r2 = run_epoch(
+        val_loss, val_mae, val_r2, val_pred_mean, val_pred_std = run_epoch(
             model, val_loader, criterion, mae_metric, r2_metric
         )
         print(
             f"epoch {epoch:03d} | "
-            f"train loss {train_loss:.4f} mae {train_mae:.2f} r2 {train_r2:.3f} | "
-            f"val loss {val_loss:.4f} mae {val_mae:.2f} r2 {val_r2:.3f}",
+            f"train loss {train_loss:.4f} mae {train_mae:.2f} r2 {train_r2:.3f} "
+            f"pred {train_pred_mean:.1f}±{train_pred_std:.1f} | "
+            f"val loss {val_loss:.4f} mae {val_mae:.2f} r2 {val_r2:.3f} "
+            f"pred {val_pred_mean:.1f}±{val_pred_std:.1f}",
             flush=True,
         )
 
@@ -286,6 +306,9 @@ def main():
         is_best = val_loss < best_val_loss
         if is_best:
             best_val_loss = val_loss
+            epochs_without_improvement = 0
+        else:
+            epochs_without_improvement += 1
 
         checkpoint = {
             "epoch": epoch,
@@ -299,6 +322,13 @@ def main():
         torch.save(checkpoint, last_checkpoint_path)
         if is_best:
             torch.save(checkpoint, best_checkpoint_path)
+        if epochs_without_improvement >= early_stopping_patience:
+            print(
+                f"early stopping after {early_stopping_patience} epochs "
+                "without validation improvement",
+                flush=True,
+            )
+            break
 
     print(
         f"finished epoch {epoch}; best val loss {best_val_loss:.4f}; "

@@ -6,7 +6,7 @@
 #$ -pe omp 16            # CPU cores, matches num_workers in train.py
 #$ -l gpus=1             # request 1 GPU
 #$ -l gpu_c=8.0          # Ampere or newer GPU
-#$ -l gpu_memory=80G     # larger LSTM (hidden_size=1536, 3 layers) needs more headroom
+#$ -l gpu_memory=24G     # time-pooled 256-unit LSTM fits comfortably
 
 module load python3/3.10.12
 module load cuda/12.2

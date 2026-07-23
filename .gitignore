@@ -1,2 +1,3 @@
 SpotGenTrack/
 .venv-train/
+/models/

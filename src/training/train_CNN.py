@@ -42,11 +42,11 @@ class PopularityCNN(nn.Module):
         self.bn4 = nn.BatchNorm2d(512)
         self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
         # Summarize to a fixed size regardless of spectrogram length.
-        self.global_pool = nn.AdaptiveAvgPool2d((4, 4))
-        self.fc1 = nn.Linear(512 * 4 * 4, 2048)
-        self.fc2 = nn.Linear(2048, 256)
-        self.fc3 = nn.Linear(256, 1)
-        self.dropout = nn.Dropout(0.3)
+        self.global_pool = nn.AdaptiveAvgPool2d((2, 2))
+        self.fc1 = nn.Linear(512 * 2 * 2, 512)
+        self.fc2 = nn.Linear(512, 64)
+        self.fc3 = nn.Linear(64, 1)
+        self.dropout = nn.Dropout(0.4)
 
     def forward(self, x):
         x = self.pool(F.relu(self.bn1(self.conv1(x))))
@@ -141,7 +141,10 @@ def main():
     model = PopularityCNN().to(device)
     criterion = nn.MSELoss()
     learning_rate = 1e-3
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    weight_decay = 1e-4
+    optimizer = torch.optim.AdamW(
+        model.parameters(), lr=learning_rate, weight_decay=weight_decay
+    )
     scheduler = ReduceLROnPlateau(optimizer, mode="min", factor=0.5, patience=5)
     warmup_epochs = 3
     warmup_steps = max(1, warmup_epochs * len(train_loader))
@@ -151,19 +154,25 @@ def main():
     mae_metric = MeanAbsoluteError().to(device)
     r2_metric = R2Score().to(device)
 
-    epochs = 150
+    epochs = 40
+    early_stopping_patience = 8
     hyperparams = {
         "batch_size": batch_size,
         "learning_rate": learning_rate,
+        "weight_decay": weight_decay,
         "epochs": epochs,
         "conv_channels": [64, 128, 256, 512],
-        "fc_dims": [2048, 256],
+        "global_pool": [2, 2],
+        "fc_dims": [512, 64],
+        "dropout": 0.4,
         "warmup_epochs": warmup_epochs,
+        "early_stopping_patience": early_stopping_patience,
     }
     last_checkpoint_path = os.path.join(checkpoint_dir, "last_CNN_checkpoint.pt")
     best_checkpoint_path = os.path.join(checkpoint_dir, "best_CNN_model.pt")
     start_epoch = 0
     best_val_loss = float("inf")
+    epochs_without_improvement = 0
 
     if os.path.exists(last_checkpoint_path):
         checkpoint = torch.load(
@@ -222,8 +231,10 @@ def main():
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             is_best = True
+            epochs_without_improvement = 0
         else:
             is_best = False
+            epochs_without_improvement += 1
 
         checkpoint = {
             "epoch": epoch,
@@ -237,6 +248,14 @@ def main():
         torch.save(checkpoint, last_checkpoint_path)
         if is_best:
             torch.save(checkpoint, best_checkpoint_path)
+
+        if epochs_without_improvement >= early_stopping_patience:
+            print(
+                f"early stopping after {early_stopping_patience} epochs "
+                "without validation improvement",
+                flush=True,
+            )
+            break
 
     print(
         f"finished epoch {epoch}; best val loss {best_val_loss:.4f}; "

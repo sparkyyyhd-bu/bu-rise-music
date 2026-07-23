@@ -11,6 +11,7 @@ from torch.utils.data import random_split, DataLoader
 import torch.nn.functional as F
 from torch.optim.lr_scheduler import LambdaLR, ReduceLROnPlateau
 from torchmetrics import MeanAbsoluteError, R2Score
+from audio_config import MAX_FRAMES
 
 if torch.cuda.is_available():
     device = torch.device("cuda")
@@ -27,8 +28,8 @@ mel_dir = sync_to_local_scratch(network_mel_dir, local_scratch_dir)
 class PopularityCNNLSTM(nn.Module):
     def __init__(self):
         super().__init__()
-        # Pool only along the frequency axis so the time dimension stays
-        # intact for the LSTM to run over.
+        # Pool time as well as frequency. Four stages reduce ~2,584 frames to
+        # ~161 useful LSTM steps instead of making recurrence the bottleneck.
         self.conv1 = nn.Conv2d(1, 32, kernel_size=3, padding=1)
         self.bn1 = nn.BatchNorm2d(32)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
@@ -37,16 +38,16 @@ class PopularityCNNLSTM(nn.Module):
         self.bn3 = nn.BatchNorm2d(128)
         self.conv4 = nn.Conv2d(128, 256, kernel_size=3, padding=1)
         self.bn4 = nn.BatchNorm2d(256)
-        self.pool = nn.MaxPool2d(kernel_size=(2, 1), stride=(2, 1))
+        self.pool = nn.MaxPool2d(kernel_size=(2, 2), stride=(2, 2))
         self.lstm = nn.LSTM(
-            input_size=256 * 8,  # 128 mel bins halved 4 times, times 256 channels
-            hidden_size=1536,
-            num_layers=3,
+            input_size=256,
+            hidden_size=256,
+            num_layers=2,
             dropout=0.3,
             batch_first=True,
         )
-        self.fc1 = nn.Linear(1536, 384)
-        self.fc2 = nn.Linear(384, 1)
+        self.fc1 = nn.Linear(256, 128)
+        self.fc2 = nn.Linear(128, 1)
         self.dropout = nn.Dropout(0.3)
 
     def forward(self, x):
@@ -54,13 +55,11 @@ class PopularityCNNLSTM(nn.Module):
         x = self.pool(F.relu(self.bn2(self.conv2(x))))
         x = self.pool(F.relu(self.bn3(self.conv3(x))))
         x = self.pool(F.relu(self.bn4(self.conv4(x))))  # (B, C, F, T)
-        x = x.permute(0, 3, 1, 2)  # (B, T, C, F)
-        x = x.flatten(2)  # (B, T, C * F)
+        x = x.mean(dim=2).transpose(1, 2)  # (B, T, C)
         _, (hidden, _) = self.lstm(x)
         x = hidden[-1]
         x = self.dropout(F.relu(self.fc1(x)))
-        x = torch.sigmoid(self.fc2(x))
-        return x.squeeze(1)
+        return self.fc2(x).squeeze(1)
 
 
 def run_epoch(model, loader, criterion, mae_metric, r2_metric, optimizer=None, warmup_scheduler=None):
@@ -69,6 +68,9 @@ def run_epoch(model, loader, criterion, mae_metric, r2_metric, optimizer=None, w
     mae_metric.reset()
     r2_metric.reset()
     total_loss = 0.0
+    prediction_sum = 0.0
+    prediction_squared_sum = 0.0
+    prediction_count = 0
 
     with torch.set_grad_enabled(is_train):
         for mels, targets in loader:
@@ -87,18 +89,33 @@ def run_epoch(model, loader, criterion, mae_metric, r2_metric, optimizer=None, w
 
             total_loss += loss.item() * mels.size(0)
             detached_predictions = predictions.detach()
+            prediction_sum += detached_predictions.sum().item()
+            prediction_squared_sum += detached_predictions.square().sum().item()
+            prediction_count += detached_predictions.numel()
             mae_metric.update(detached_predictions * 100, targets * 100)
             r2_metric.update(detached_predictions * 100, targets * 100)
 
     avg_loss = total_loss / len(loader.dataset)
-    return avg_loss, mae_metric.compute().item(), r2_metric.compute().item()
+    prediction_mean = prediction_sum / prediction_count
+    prediction_variance = max(
+        0.0, prediction_squared_sum / prediction_count - prediction_mean**2
+    )
+    return (
+        avg_loss,
+        mae_metric.compute().item(),
+        r2_metric.compute().item(),
+        prediction_mean * 100,
+        prediction_variance**0.5 * 100,
+    )
 
 
 def collate_fn(batch):
     mels, targets = zip(*batch)
-    max_frames = max(mel.shape[-1] for mel in mels)
     padded = torch.stack(
-        [F.pad(mel, (0, max_frames - mel.shape[-1])) for mel in mels]
+        [
+            F.pad(mel, (0, max(0, MAX_FRAMES - mel.shape[-1])))[..., :MAX_FRAMES]
+            for mel in mels
+        ]
     )
     padded = padded.unsqueeze(1)  # (B, 1, n_mels, time)
     targets = torch.stack(targets)
@@ -120,9 +137,7 @@ def main():
         generator=torch.Generator().manual_seed(0),
     )
 
-    # Convolutional feature maps at full time resolution plus the LSTM's
-    # recurrent state make this heavier than either model alone.
-    batch_size = 16
+    batch_size = 32
     train_loader = DataLoader(
         train_set,
         batch_size,
@@ -142,8 +157,11 @@ def main():
 
     model = PopularityCNNLSTM().to(device)
     criterion = nn.MSELoss()
-    learning_rate = 1e-3
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    learning_rate = 1e-4
+    weight_decay = 1e-4
+    optimizer = torch.optim.AdamW(
+        model.parameters(), lr=learning_rate, weight_decay=weight_decay
+    )
     scheduler = ReduceLROnPlateau(optimizer, mode="min", factor=0.5, patience=5)
     warmup_epochs = 3
     warmup_steps = max(1, warmup_epochs * len(train_loader))
@@ -153,21 +171,26 @@ def main():
     mae_metric = MeanAbsoluteError().to(device)
     r2_metric = R2Score().to(device)
 
-    epochs = 100
+    epochs = 60
+    early_stopping_patience = 8
     hyperparams = {
         "batch_size": batch_size,
         "learning_rate": learning_rate,
+        "weight_decay": weight_decay,
         "epochs": epochs,
         "conv_channels": [32, 64, 128, 256],
-        "hidden_size": 1536,
-        "num_layers": 3,
-        "fc_dims": [384],
+        "pool_size": [2, 2],
+        "hidden_size": 256,
+        "num_layers": 2,
+        "fc_dims": [128],
         "warmup_epochs": warmup_epochs,
+        "early_stopping_patience": early_stopping_patience,
     }
     last_checkpoint_path = os.path.join(checkpoint_dir, "last_CNN_LSTM_checkpoint.pt")
     best_checkpoint_path = os.path.join(checkpoint_dir, "best_CNN_LSTM_model.pt")
     start_epoch = 0
     best_val_loss = float("inf")
+    epochs_without_improvement = 0
 
     if os.path.exists(last_checkpoint_path):
         checkpoint = torch.load(
@@ -205,18 +228,22 @@ def main():
                 flush=True,
             )
 
-    for epoch in range(start_epoch + 1, start_epoch + epochs + 1):
-        train_loss, train_mae, train_r2 = run_epoch(
+    epoch = start_epoch
+    for epoch in range(start_epoch + 1, epochs + 1):
+        train_loss, train_mae, train_r2, train_pred_mean, train_pred_std = run_epoch(
             model, train_loader, criterion, mae_metric, r2_metric, optimizer,
             warmup_scheduler if epoch <= warmup_epochs else None,
         )
-        val_loss, val_mae, val_r2 = run_epoch(
+        val_loss, val_mae, val_r2, val_pred_mean, val_pred_std = run_epoch(
             model, val_loader, criterion, mae_metric, r2_metric
         )
         print(
             f"epoch {epoch:03d} | "
-            f"train loss {train_loss:.4f} mae {train_mae:.2f} r2 {train_r2:.3f} | "
-            f"val loss {val_loss:.4f} mae {val_mae:.2f} r2 {val_r2:.3f}"
+            f"train loss {train_loss:.4f} mae {train_mae:.2f} r2 {train_r2:.3f} "
+            f"pred {train_pred_mean:.1f}±{train_pred_std:.1f} | "
+            f"val loss {val_loss:.4f} mae {val_mae:.2f} r2 {val_r2:.3f} "
+            f"pred {val_pred_mean:.1f}±{val_pred_std:.1f}",
+            flush=True,
         )
 
         if epoch > warmup_epochs:
@@ -225,8 +252,10 @@ def main():
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             is_best = True
+            epochs_without_improvement = 0
         else:
             is_best = False
+            epochs_without_improvement += 1
 
         checkpoint = {
             "epoch": epoch,
@@ -240,6 +269,13 @@ def main():
         torch.save(checkpoint, last_checkpoint_path)
         if is_best:
             torch.save(checkpoint, best_checkpoint_path)
+        if epochs_without_improvement >= early_stopping_patience:
+            print(
+                f"early stopping after {early_stopping_patience} epochs "
+                "without validation improvement",
+                flush=True,
+            )
+            break
 
     print(
         f"finished epoch {epoch}; best val loss {best_val_loss:.4f}; "

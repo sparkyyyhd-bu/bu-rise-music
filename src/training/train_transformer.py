@@ -25,37 +25,49 @@ os.makedirs(checkpoint_dir, exist_ok=True)
 mel_dir = sync_to_local_scratch(network_mel_dir, local_scratch_dir)
 
 
-D_MODEL = 1280
+D_MODEL = 256
+PATCH_SIZE = 16
+PATCH_STRIDE = 8
+MAX_TOKENS = 1 + (MAX_FRAMES - PATCH_SIZE) // PATCH_STRIDE
 
 
 class PopularityTransformer(nn.Module):
     def __init__(self):
         super().__init__()
-        self.input_proj = nn.Linear(N_MELS, D_MODEL)
+        # Compress neighboring frames before self-attention.  Attention on all
+        # ~2,584 frames was both unnecessarily expensive and hard to optimize.
+        self.patch_embedding = nn.Conv1d(
+            N_MELS,
+            D_MODEL,
+            kernel_size=PATCH_SIZE,
+            stride=PATCH_STRIDE,
+        )
         encoder_layer = nn.TransformerEncoderLayer(
-            d_model = D_MODEL,
-            nhead = 8,
-            dim_feedforward=5120,
+            d_model=D_MODEL,
+            nhead=8,
+            dim_feedforward=1024,
+            dropout=0.1,
             batch_first=True,
-            activation='gelu'
+            activation="gelu",
+            norm_first=True,
         )
         self.encoder = nn.TransformerEncoder(
             encoder_layer,
-            num_layers=8
+            num_layers=4,
+            norm=nn.LayerNorm(D_MODEL),
         )
         self.position_embedding = nn.Parameter(
-            torch.randn(1, MAX_FRAMES, D_MODEL) * 0.02
+            torch.randn(1, MAX_TOKENS, D_MODEL) * 0.02
         )
         self.fc = nn.Linear(D_MODEL, 1)
 
     def forward(self,x):
-        x = self.input_proj(x)
+        x = self.patch_embedding(x.transpose(1, 2)).transpose(1, 2)
         positions = self.position_embedding[:,:x.shape[1],:]
         x = x + positions
         x = self.encoder(x)
         x = x.mean(dim=1)
-        x = torch.sigmoid(self.fc(x))
-        return x.squeeze(1)
+        return self.fc(x).squeeze(1)
 
 
 def run_epoch(model, loader, criterion, mae_metric, r2_metric, optimizer = None, warmup_scheduler = None):
@@ -64,6 +76,9 @@ def run_epoch(model, loader, criterion, mae_metric, r2_metric, optimizer = None,
     mae_metric.reset()
     r2_metric.reset()
     total_loss = 0.0
+    prediction_sum = 0.0
+    prediction_squared_sum = 0.0
+    prediction_count = 0
 
     with torch.set_grad_enabled(is_train):
         for mels, targets in loader:
@@ -81,11 +96,25 @@ def run_epoch(model, loader, criterion, mae_metric, r2_metric, optimizer = None,
                     warmup_scheduler.step()
             total_loss += loss.item() * mels.size(0)
             detached_predictions = predictions.detach()
+            prediction_sum += detached_predictions.sum().item()
+            prediction_squared_sum += detached_predictions.square().sum().item()
+            prediction_count += detached_predictions.numel()
             mae_metric.update(detached_predictions * 100, targets * 100)
             r2_metric.update(detached_predictions * 100, targets * 100)
     
     avg_loss = total_loss / len(loader.dataset)
-    return avg_loss, mae_metric.compute().item(), r2_metric.compute().item()
+    prediction_mean = prediction_sum / prediction_count
+    prediction_variance = max(
+        0.0, prediction_squared_sum / prediction_count - prediction_mean**2
+    )
+    prediction_std = prediction_variance**0.5
+    return (
+        avg_loss,
+        mae_metric.compute().item(),
+        r2_metric.compute().item(),
+        prediction_mean * 100,
+        prediction_std * 100,
+    )
 
 
 def to_max_frames(mel):
@@ -107,17 +136,19 @@ def main():
     torch.manual_seed(0)
 
     popularity_by_id = load_popularity_by_id()
-    epochs = 150
+    epochs = 60
     dataset = MelPopularityDataset(mel_dir, popularity_by_id)
 
     val_size = max(1, int(0.15 * len(dataset)))
     test_size = max(1, int(0.15 * len(dataset)))
     train_size = len(dataset) - val_size - test_size
-    train_set, val_set, test_set = random_split(dataset, [train_size, val_size, test_size])
+    train_set, val_set, test_set = random_split(
+        dataset,
+        [train_size, val_size, test_size],
+        generator=torch.Generator().manual_seed(0),
+    )
 
-    # Long sequences and the wide feed-forward layers create large saved
-    # activations during training, so keep the per-GPU batch conservative.
-    batch_size = 8
+    batch_size = 32
     train_loader = DataLoader(
         train_set,
         batch_size,
@@ -136,8 +167,11 @@ def main():
     )
     model = PopularityTransformer().to(device)
     criterion = nn.MSELoss()
-    learning_rate = 1e-3
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    learning_rate = 1e-4
+    weight_decay = 1e-4
+    optimizer = torch.optim.AdamW(
+        model.parameters(), lr=learning_rate, weight_decay=weight_decay
+    )
     scheduler = ReduceLROnPlateau(optimizer, mode="min", factor=0.5, patience=5)
     warmup_epochs = 3
     warmup_steps = max(1, warmup_epochs * len(train_loader))
@@ -150,13 +184,18 @@ def main():
     hyperparams = {
         "batch_size": batch_size,
         "learning_rate": learning_rate,
+        "weight_decay": weight_decay,
         "epochs": epochs,
         "d_model": D_MODEL,
+        "patch_size": PATCH_SIZE,
+        "patch_stride": PATCH_STRIDE,
         "nhead": 8,
-        "dim_feedforward": 5120,
-        "num_layers": 8,
+        "dim_feedforward": 1024,
+        "num_layers": 4,
         "warmup_epochs": warmup_epochs,
     }
+    early_stopping_patience = 8
+    epochs_without_improvement = 0
     last_checkpoint_path = os.path.join(checkpoint_dir, "last_transformer_checkpoint.pt")
     best_checkpoint_path = os.path.join(checkpoint_dir, "best_transformer_model.pt")
     start_epoch = 0
@@ -200,18 +239,21 @@ def main():
     
     epoch = start_epoch
     for epoch in range(start_epoch+1,epochs+1):
-        train_loss, train_mae, train_r2 = run_epoch(
+        train_loss, train_mae, train_r2, train_pred_mean, train_pred_std = run_epoch(
             model, train_loader, criterion, mae_metric, r2_metric, optimizer,
             warmup_scheduler if epoch <= warmup_epochs else None,
         )
-        val_loss, val_mae, val_r2 = run_epoch(
+        val_loss, val_mae, val_r2, val_pred_mean, val_pred_std = run_epoch(
             model, val_loader, criterion, mae_metric, r2_metric
         )
 
         print(
             f"epoch {epoch:03d} | "
-            f"train loss {train_loss:.4f} mae {train_mae:.2f} r2 {train_r2:.3f} | "
-            f"val loss {val_loss:.4f} mae {val_mae:.2f} r2 {val_r2:.3f}"
+            f"train loss {train_loss:.4f} mae {train_mae:.2f} r2 {train_r2:.3f} "
+            f"pred {train_pred_mean:.1f}±{train_pred_std:.1f} | "
+            f"val loss {val_loss:.4f} mae {val_mae:.2f} r2 {val_r2:.3f} "
+            f"pred {val_pred_mean:.1f}±{val_pred_std:.1f}",
+            flush=True,
         )
 
         if epoch > warmup_epochs:
@@ -220,8 +262,10 @@ def main():
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             is_best = True
+            epochs_without_improvement = 0
         else:
             is_best = False
+            epochs_without_improvement += 1
 
         checkpoint = {
             "epoch": epoch,
@@ -235,6 +279,13 @@ def main():
         torch.save(checkpoint, last_checkpoint_path)
         if is_best:
             torch.save(checkpoint, best_checkpoint_path)
+        if epochs_without_improvement >= early_stopping_patience:
+            print(
+                f"early stopping after {early_stopping_patience} epochs "
+                "without validation improvement",
+                flush=True,
+            )
+            break
 
     print(
         f"finished epoch {epoch}; best val loss {best_val_loss:.4f}; "
