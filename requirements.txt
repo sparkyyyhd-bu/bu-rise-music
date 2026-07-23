@@ -7,3 +7,5 @@ torchvision
 torchaudio
 torchmetrics
 tqdm
+scikit-learn
+joblib
