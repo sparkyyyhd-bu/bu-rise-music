@@ -9,3 +9,4 @@ torchmetrics
 tqdm
 scikit-learn
 joblib
+xgboost
