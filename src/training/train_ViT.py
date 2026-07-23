@@ -196,7 +196,7 @@ def main():
         generator=torch.Generator().manual_seed(0),
     )
 
-    batch_size = 32
+    batch_size = 16
     loader_options = {
         "batch_size": batch_size,
         "num_workers": 16,
