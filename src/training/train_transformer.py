@@ -29,6 +29,7 @@ mel_dir = sync_to_local_scratch(network_mel_dir, local_scratch_dir)
 D_MODEL = 256
 PATCH_SIZE = 16
 PATCH_STRIDE = 8
+TRANSFORMER_DROPOUT = 0.3
 MAX_TOKENS = 1 + (MAX_FRAMES - PATCH_SIZE) // PATCH_STRIDE
 
 
@@ -47,7 +48,7 @@ class PopularityTransformer(nn.Module):
             d_model=D_MODEL,
             nhead=8,
             dim_feedforward=1024,
-            dropout=0.1,
+            dropout=TRANSFORMER_DROPOUT,
             batch_first=True,
             activation="gelu",
             norm_first=True,
@@ -171,7 +172,7 @@ def main():
     model = PopularityTransformer().to(device)
     criterion = nn.MSELoss()
     learning_rate = 1e-4
-    weight_decay = 1e-4
+    weight_decay = 1e-3
     optimizer = torch.optim.AdamW(
         model.parameters(), lr=learning_rate, weight_decay=weight_decay
     )
@@ -195,6 +196,7 @@ def main():
         "nhead": 8,
         "dim_feedforward": 1024,
         "num_layers": 4,
+        "dropout": TRANSFORMER_DROPOUT,
         "warmup_epochs": warmup_epochs,
     }
     last_checkpoint_path = os.path.join(checkpoint_dir, "last_transformer_checkpoint.pt")
