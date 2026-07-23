@@ -19,19 +19,17 @@ from training.data_utils import (
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-class BasicBlock(nn.Module):
-    """Two-convolution residual block used by ResNet-18."""
+class Bottleneck(nn.Module):
+    """1x1, 3x3, 1x1 residual bottleneck used by ResNet-50."""
 
-    expansion = 1
+    expansion = 4
 
     def __init__(self, in_channels, out_channels, stride=1):
         super().__init__()
         self.conv1 = nn.Conv2d(
             in_channels,
             out_channels,
-            kernel_size=3,
-            stride=stride,
-            padding=1,
+            kernel_size=1,
             bias=False,
         )
         self.bn1 = nn.BatchNorm2d(out_channels)
@@ -39,21 +37,30 @@ class BasicBlock(nn.Module):
             out_channels,
             out_channels,
             kernel_size=3,
+            stride=stride,
             padding=1,
             bias=False,
         )
         self.bn2 = nn.BatchNorm2d(out_channels)
+        self.conv3 = nn.Conv2d(
+            out_channels,
+            out_channels * self.expansion,
+            kernel_size=1,
+            bias=False,
+        )
+        self.bn3 = nn.BatchNorm2d(out_channels * self.expansion)
 
-        if stride != 1 or in_channels != out_channels:
+        expanded_channels = out_channels * self.expansion
+        if stride != 1 or in_channels != expanded_channels:
             self.shortcut = nn.Sequential(
                 nn.Conv2d(
                     in_channels,
-                    out_channels,
+                    expanded_channels,
                     kernel_size=1,
                     stride=stride,
                     bias=False,
                 ),
-                nn.BatchNorm2d(out_channels),
+                nn.BatchNorm2d(expanded_channels),
             )
         else:
             self.shortcut = nn.Identity()
@@ -61,14 +68,15 @@ class BasicBlock(nn.Module):
     def forward(self, x):
         identity = self.shortcut(x)
         x = F.relu(self.bn1(self.conv1(x)), inplace=True)
-        x = self.bn2(self.conv2(x))
+        x = F.relu(self.bn2(self.conv2(x)), inplace=True)
+        x = self.bn3(self.conv3(x))
         return F.relu(x + identity, inplace=True)
 
 
 class PopularityResNet(nn.Module):
-    """ResNet-18 regressor adapted for single-channel mel spectrograms."""
+    """ResNet-50 regressor adapted for single-channel mel spectrograms."""
 
-    def __init__(self, layers=(2, 2, 2, 2), dropout=0.3):
+    def __init__(self, layers=(3, 4, 6, 3), dropout=0.3):
         super().__init__()
         self.in_channels = 64
         self.stem = nn.Sequential(
@@ -85,14 +93,14 @@ class PopularityResNet(nn.Module):
         self.layer4 = self._make_layer(512, layers[3], stride=2)
         self.global_pool = nn.AdaptiveAvgPool2d((1, 1))
         self.dropout = nn.Dropout(dropout)
-        self.head = nn.Linear(512 * BasicBlock.expansion, 1)
+        self.head = nn.Linear(512 * Bottleneck.expansion, 1)
         self._initialize_weights()
 
     def _make_layer(self, out_channels, num_blocks, stride=1):
-        blocks = [BasicBlock(self.in_channels, out_channels, stride)]
-        self.in_channels = out_channels * BasicBlock.expansion
+        blocks = [Bottleneck(self.in_channels, out_channels, stride)]
+        self.in_channels = out_channels * Bottleneck.expansion
         blocks.extend(
-            BasicBlock(self.in_channels, out_channels)
+            Bottleneck(self.in_channels, out_channels)
             for _ in range(1, num_blocks)
         )
         return nn.Sequential(*blocks)
@@ -239,8 +247,8 @@ def main():
 
     epochs = 60
     hyperparams = {
-        "architecture": "ResNet-18",
-        "layers": [2, 2, 2, 2],
+        "architecture": "ResNet-50",
+        "layers": [3, 4, 6, 3],
         "batch_size": batch_size,
         "learning_rate": learning_rate,
         "weight_decay": weight_decay,
