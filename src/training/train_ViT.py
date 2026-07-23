@@ -23,7 +23,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class PatchEmbedding(nn.Module):
     """Turn a mel spectrogram into a sequence of overlapping 2-D patches."""
 
-    def __init__(self, patch_size=(16, 16), patch_stride=(10, 10), embed_dim=768):
+    def __init__(self, patch_size=(16, 16), patch_stride=(16, 16), embed_dim=384):
         super().__init__()
         self.patch_size = patch_size
         self.patch_stride = patch_stride
@@ -43,11 +43,11 @@ class PopularityViT(nn.Module):
         self,
         image_size=(N_MELS, MAX_FRAMES),
         patch_size=(16, 16),
-        patch_stride=(10, 10),
-        embed_dim=768,
-        num_heads=12,
-        num_layers=12,
-        mlp_dim=3072,
+        patch_stride=(16, 16),
+        embed_dim=384,
+        num_heads=6,
+        num_layers=6,
+        mlp_dim=1536,
         dropout=0.1,
     ):
         super().__init__()
@@ -123,6 +123,7 @@ def run_epoch(
     r2_metric,
     optimizer=None,
     warmup_scheduler=None,
+    scaler=None,
 ):
     is_train = optimizer is not None
     model.train(is_train)
@@ -139,14 +140,22 @@ def run_epoch(
             targets = targets.to(device, non_blocking=True)
             if is_train:
                 mels = spec_augment(mels, frequency_dim=2, time_dim=3)
-            predictions = model(mels)
-            loss = criterion(predictions, targets)
+            with torch.autocast(device_type=device.type, enabled=device.type == "cuda"):
+                predictions = model(mels)
+                loss = criterion(predictions, targets)
 
             if is_train:
                 optimizer.zero_grad()
-                loss.backward()
-                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-                optimizer.step()
+                if scaler is not None:
+                    scaler.scale(loss).backward()
+                    scaler.unscale_(optimizer)
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+                    scaler.step(optimizer)
+                    scaler.update()
+                else:
+                    loss.backward()
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+                    optimizer.step()
                 if warmup_scheduler is not None:
                     warmup_scheduler.step()
 
@@ -196,7 +205,7 @@ def main():
         generator=torch.Generator().manual_seed(0),
     )
 
-    batch_size = 16
+    batch_size = 32
     loader_options = {
         "batch_size": batch_size,
         "num_workers": 16,
@@ -222,8 +231,9 @@ def main():
     )
     mae_metric = MeanAbsoluteError().to(device)
     r2_metric = R2Score().to(device)
+    scaler = torch.cuda.amp.GradScaler(enabled=device.type == "cuda")
 
-    epochs = 60
+    epochs = 40
     hyperparams = {
         "batch_size": batch_size,
         "learning_rate": learning_rate,
@@ -231,12 +241,12 @@ def main():
         "epochs": epochs,
         "image_size": [N_MELS, MAX_FRAMES],
         "patch_size": [16, 16],
-        "patch_stride": [10, 10],
-        "patch_overlap": [6, 6],
-        "embed_dim": 768,
-        "num_heads": 12,
-        "num_layers": 12,
-        "mlp_dim": 3072,
+        "patch_stride": [16, 16],
+        "patch_overlap": [0, 0],
+        "embed_dim": 384,
+        "num_heads": 6,
+        "num_layers": 6,
+        "mlp_dim": 1536,
         "dropout": 0.1,
         "warmup_epochs": warmup_epochs,
     }
@@ -288,6 +298,7 @@ def main():
             r2_metric,
             optimizer,
             warmup_scheduler if epoch <= warmup_epochs else None,
+            scaler,
         )
         val_loss, val_mae, val_r2, val_pred_mean, val_pred_std = run_epoch(
             model, val_loader, criterion, mae_metric, r2_metric
