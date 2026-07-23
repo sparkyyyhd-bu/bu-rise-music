@@ -1,8 +1,4 @@
-"""Train a Random Forest on frozen CNN embeddings and all audio-only features.
-
-The 64 values produced by the best CNN's final hidden layer (fc2) are joined
-with both Spotify audio descriptors and the extracted low-level audio features.
-"""
+"""Train a Random Forest from cached CNN embeddings and all audio features."""
 
 import json
 import os
@@ -13,19 +9,18 @@ import joblib
 import numpy as np
 import pandas as pd
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.impute import SimpleImputer
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.pipeline import Pipeline
-from torch.utils.data import DataLoader, Dataset, random_split
+from torch.utils.data import random_split
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 USER = os.environ["USER"]
-MEL_DIR = Path("/net/scc1/scratch") / USER / "mel_spectrograms"
-CNN_CHECKPOINT = REPO_ROOT / "models" / "best_CNN_model.pt"
+CHECKPOINT_DIR = Path("/net/scc1/scratch") / USER / "checkpoints"
+EMBEDDINGS_PATH = CHECKPOINT_DIR / "CNN_embeddings.npz"
+OUTPUT_PATH = CHECKPOINT_DIR / "best_CNN_RF_model.joblib"
 TRACKS_CSV = (
     REPO_ROOT
     / "data"
@@ -40,17 +35,8 @@ LOW_LEVEL_CSV = (
     / "Features Extracted"
     / "low_level_audio_features.csv"
 )
-OUTPUT_PATH = (
-    Path("/net/scc1/scratch")
-    / USER
-    / "checkpoints"
-    / "best_CNN_RF_model.joblib"
-)
-BATCH_SIZE = 32
-NUM_WORKERS = 8
 N_TREES = 500
 RANDOM_SEED = 0
-MEL_SUFFIX = "_mel.pt"
 SPOTIFY_AUDIO_FEATURES = [
     "acousticness",
     "danceability",
@@ -68,110 +54,27 @@ SPOTIFY_AUDIO_FEATURES = [
 ]
 
 
-class PopularityCNN(nn.Module):
-    """Architecture used by train_CNN.py, with access to its last hidden vector."""
-
-    def __init__(self):
-        super().__init__()
-        self.conv1 = nn.Conv2d(1, 64, kernel_size=3, padding=1)
-        self.bn1 = nn.BatchNorm2d(64)
-        self.conv2 = nn.Conv2d(64, 128, kernel_size=3, padding=1)
-        self.bn2 = nn.BatchNorm2d(128)
-        self.conv3 = nn.Conv2d(128, 256, kernel_size=3, padding=1)
-        self.bn3 = nn.BatchNorm2d(256)
-        self.conv4 = nn.Conv2d(256, 512, kernel_size=3, padding=1)
-        self.bn4 = nn.BatchNorm2d(512)
-        self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
-        self.global_pool = nn.AdaptiveAvgPool2d((2, 2))
-        self.fc1 = nn.Linear(512 * 2 * 2, 512)
-        self.fc2 = nn.Linear(512, 64)
-        self.fc3 = nn.Linear(64, 1)
-        self.dropout = nn.Dropout(0.4)
-
-    def embedding(self, x):
-        x = self.pool(F.relu(self.bn1(self.conv1(x))))
-        x = self.pool(F.relu(self.bn2(self.conv2(x))))
-        x = self.pool(F.relu(self.bn3(self.conv3(x))))
-        x = self.pool(F.relu(self.bn4(self.conv4(x))))
-        x = self.global_pool(x).flatten(1)
-        x = self.dropout(F.relu(self.fc1(x)))
-        return self.dropout(F.relu(self.fc2(x)))
-
-    def forward(self, x):
-        return torch.sigmoid(self.fc3(self.embedding(x))).squeeze(1)
+def load_embeddings():
+    with np.load(EMBEDDINGS_PATH, allow_pickle=False) as cache:
+        track_ids = cache["track_ids"].astype(str)
+        embeddings = cache["embeddings"].astype(np.float32, copy=False)
+    if embeddings.ndim != 2 or embeddings.shape[1] != 64:
+        raise ValueError(
+            f"expected embeddings with shape (tracks, 64), got {embeddings.shape}"
+        )
+    if len(track_ids) != len(embeddings):
+        raise ValueError("embedding and track ID counts do not match")
+    if len(set(track_ids)) != len(track_ids):
+        raise ValueError("embedding cache contains duplicate track IDs")
+    return track_ids, embeddings
 
 
-class MelTrackDataset(Dataset):
-    def __init__(self, mel_dir, labeled_ids):
-        self.entries = [
-            (entry.path, entry.name[: -len(MEL_SUFFIX)])
-            for entry in os.scandir(mel_dir)
-            if entry.is_file()
-            and entry.name.endswith(MEL_SUFFIX)
-            and entry.name[: -len(MEL_SUFFIX)] in labeled_ids
-        ]
-        if not self.entries:
-            raise ValueError(f"no labeled {MEL_SUFFIX} files found in {mel_dir}")
-
-    def __len__(self):
-        return len(self.entries)
-
-    def __getitem__(self, index):
-        path, track_id = self.entries[index]
-        mel = torch.load(path, map_location="cpu", weights_only=True)
-        if mel.dim() == 3:
-            mel = mel.mean(dim=0)
-        mel = (mel.float() - mel.float().mean()) / (mel.float().std() + 1e-5)
-        return mel, track_id
-
-
-def collate_mels(batch):
-    mels, track_ids = zip(*batch)
-    max_frames = max(mel.shape[-1] for mel in mels)
-    padded = torch.stack(
-        [F.pad(mel, (0, max_frames - mel.shape[-1])) for mel in mels]
-    ).unsqueeze(1)
-    return padded, list(track_ids)
-
-
-def load_cnn(checkpoint_path, device):
-    checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=True)
-    state = checkpoint.get("model_state_dict", checkpoint)
-    model = PopularityCNN()
-    model.load_state_dict(state, strict=True)
-    model.to(device).eval()
-    return model
-
-
-def extract_embeddings(model, subset, device, batch_size, num_workers):
-    loader = DataLoader(
-        subset,
-        batch_size=batch_size,
-        shuffle=False,
-        num_workers=num_workers,
-        pin_memory=(device.type == "cuda"),
-        collate_fn=collate_mels,
-    )
-    rows = []
-    with torch.inference_mode():
-        for mels, track_ids in loader:
-            values = model.embedding(
-                mels.to(device, non_blocking=True)
-            ).cpu().numpy()
-            rows.extend(
-                {"id": track_id, **{f"cnn_{i:02d}": value for i, value in enumerate(vector)}}
-                for track_id, vector in zip(track_ids, values)
-            )
-    return pd.DataFrame(rows)
-
-
-def load_tabular_features():
+def load_audio_features():
     tracks = pd.read_csv(
         TRACKS_CSV,
         usecols=["id", "popularity", *SPOTIFY_AUDIO_FEATURES],
     )
     tracks = tracks.dropna(subset=["id", "popularity"]).drop_duplicates("id")
-    feature_names = list(SPOTIFY_AUDIO_FEATURES)
 
     low_level = pd.read_csv(LOW_LEVEL_CSV)
     low_level = low_level.drop(
@@ -194,9 +97,7 @@ def load_tabular_features():
         how="inner",
         validate="one_to_one",
     )
-    feature_names.extend(low_level_names)
-
-    return tracks, feature_names
+    return tracks, [*SPOTIFY_AUDIO_FEATURES, *low_level_names]
 
 
 def evaluate(model, x, y, label):
@@ -217,52 +118,45 @@ def evaluate(model, x, y, label):
 def main():
     np.random.seed(RANDOM_SEED)
     torch.manual_seed(RANDOM_SEED)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"extracting CNN embeddings on {device}", flush=True)
+    track_ids, embeddings = load_embeddings()
 
-    tabular, audio_feature_names = load_tabular_features()
-    labeled_tracks = pd.read_csv(
-        TRACKS_CSV, usecols=["id", "popularity"]
-    ).dropna(subset=["id", "popularity"])
-    # Partition the same full labeled population as train_CNN.py, then join
-    # low-level features. Filtering before the split would shift assignments.
-    dataset = MelTrackDataset(MEL_DIR, set(labeled_tracks["id"]))
-    val_size = max(1, int(0.15 * len(dataset)))
-    test_size = max(1, int(0.15 * len(dataset)))
-    train_size = len(dataset) - val_size - test_size
+    val_size = max(1, int(0.15 * len(track_ids)))
+    test_size = max(1, int(0.15 * len(track_ids)))
+    train_size = len(track_ids) - val_size - test_size
     if train_size < 1:
-        raise ValueError("at least three mel spectrograms are required")
+        raise ValueError("at least three cached embeddings are required")
 
-    # Reconstruct train_CNN.py's seed-0 partition so RF validation examples
-    # were not used to fit the CNN. The original CNN script always used seed 0.
-    train_set, val_set, _ = random_split(
-        dataset,
+    # The cache preserves MelPopularityDataset's scan order. Reusing seed 0
+    # therefore reconstructs the split from train_CNN.py.
+    train_subset, val_subset, _ = random_split(
+        range(len(track_ids)),
         [train_size, val_size, test_size],
         generator=torch.Generator().manual_seed(0),
     )
-    cnn = load_cnn(CNN_CHECKPOINT, device)
-    train_embeddings = extract_embeddings(
-        cnn, train_set, device, BATCH_SIZE, NUM_WORKERS
-    )
-    val_embeddings = extract_embeddings(
-        cnn, val_set, device, BATCH_SIZE, NUM_WORKERS
-    )
+    train_indices = np.asarray(train_subset.indices)
+    val_indices = np.asarray(val_subset.indices)
 
-    cnn_feature_names = [f"cnn_{i:02d}" for i in range(64)]
-    feature_names = [*cnn_feature_names, *audio_feature_names]
-
-    train = train_embeddings.merge(tabular, on="id", how="inner", validate="one_to_one")
-    validation = val_embeddings.merge(
+    cnn_feature_names = [f"cnn_{index:02d}" for index in range(64)]
+    embedding_frame = pd.DataFrame(embeddings, columns=cnn_feature_names)
+    embedding_frame.insert(0, "id", track_ids)
+    tabular, audio_feature_names = load_audio_features()
+    combined = embedding_frame.merge(
         tabular, on="id", how="inner", validate="one_to_one"
-    )
+    ).set_index("id")
+
+    train_ids = set(track_ids[train_indices])
+    val_ids = set(track_ids[val_indices])
+    train = combined.loc[combined.index.isin(train_ids)]
+    validation = combined.loc[combined.index.isin(val_ids)]
     if train.empty or validation.empty:
-        raise ValueError("no labeled track IDs overlap the mel and tabular datasets")
+        raise ValueError("no cached IDs overlap the tabular audio features")
+
+    feature_names = [*cnn_feature_names, *audio_feature_names]
     print(
         f"matched {len(train)} training and {len(validation)} validation tracks; "
         f"using {len(feature_names)} features",
         flush=True,
     )
-
     pipeline = Pipeline(
         [
             ("imputer", SimpleImputer(strategy="median")),
@@ -282,8 +176,11 @@ def main():
     train_metrics = evaluate(
         pipeline, train[feature_names], train["popularity"], "train"
     )
-    val_metrics = evaluate(
-        pipeline, validation[feature_names], validation["popularity"], "validation"
+    validation_metrics = evaluate(
+        pipeline,
+        validation[feature_names],
+        validation["popularity"],
+        "validation",
     )
 
     artifact = {
@@ -291,18 +188,18 @@ def main():
         "feature_names": feature_names,
         "cnn_feature_names": cnn_feature_names,
         "audio_feature_names": audio_feature_names,
-        "cnn_checkpoint": str(CNN_CHECKPOINT),
+        "embeddings_path": str(EMBEDDINGS_PATH),
         "split_seed": 0,
         "rf_seed": RANDOM_SEED,
         "train_metrics": train_metrics,
-        "validation_metrics": val_metrics,
+        "validation_metrics": validation_metrics,
     }
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     joblib.dump(artifact, OUTPUT_PATH)
     metrics_path = OUTPUT_PATH.with_suffix(".metrics.json")
     metrics_path.write_text(
         json.dumps(
-            {"train": train_metrics, "validation": val_metrics},
+            {"train": train_metrics, "validation": validation_metrics},
             indent=2,
         )
         + "\n"
