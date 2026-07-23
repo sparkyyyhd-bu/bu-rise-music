@@ -59,7 +59,19 @@ def run_epoch(model, loader, criterion, mae_metric, r2_metric, optimizer = None,
             targets = targets.to(device, non_blocking=True)
 
             if is_train:
-                mels = spec_augment(mels, frequency_dim=2, time_dim=1)
+                # A masked span sits directly in the LSTM's only path to its
+                # final hidden state (unlike a CNN's local receptive field or
+                # a transformer's attention over all tokens), so keep the
+                # mask much narrower and less frequent than the image-style
+                # defaults tuned for those architectures.
+                mels = spec_augment(
+                    mels,
+                    frequency_dim=2,
+                    time_dim=1,
+                    probability=0.5,
+                    max_frequency_width=10,
+                    max_time_width=15,
+                )
             predictions = model(mels)
             loss = criterion(predictions, targets)
             if is_train:
