@@ -7,7 +7,7 @@
 #$ -l mem_per_core=5G    # 80 GB host RAM total
 #$ -l gpus=1             # request 1 GPU
 #$ -l gpu_c=8.0          # Ampere or newer GPU
-#$ -l gpu_memory=24G     # time-pooled 256-unit LSTM fits comfortably
+#$ -l gpu_memory=40G     # headroom for batch-32 CNN/LSTM training
 
 module load python3/3.10.12
 module load cuda/12.2
