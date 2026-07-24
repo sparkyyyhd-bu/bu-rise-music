@@ -9,7 +9,6 @@ import os
 from torch.utils.data import random_split, DataLoader
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torchmetrics import MeanAbsoluteError, R2Score
 
 
@@ -29,20 +28,17 @@ class PopularityLSTM(nn.Module):
         super().__init__()
         self.lstm = nn.LSTM(
             input_size = 128,
-            hidden_size = 1408,
-            num_layers=3,
-            dropout=0.3,
+            hidden_size = 512,
+            num_layers=2,
+            dropout=0.2,
             batch_first=True
         )
-        self.fc1 = nn.Linear(1408, 352)
-        self.fc2 = nn.Linear(352, 1)
-        self.dropout = nn.Dropout(0.3)
+        self.fc = nn.Linear(512, 1)
 
     def forward(self, x):
         _, (hidden, _) = self.lstm(x)
         x = hidden[-1]
-        x = self.dropout(F.relu(self.fc1(x)))
-        x = torch.sigmoid(self.fc2(x))
+        x = torch.sigmoid(self.fc(x))
         return x.squeeze(1)
 
 def run_epoch(model, loader, criterion, mae_metric, r2_metric, optimizer = None):
@@ -86,7 +82,7 @@ def collate_fn(batch):
 def main():
     torch.manual_seed(0)
     popularity_by_id = load_popularity_by_id()
-    dataset = MelPopularityDataset(mel_dir,popularity_by_id)
+    dataset = MelPopularityDataset(mel_dir, popularity_by_id, normalize=False)
     print(f"loaded {len(dataset)} labeled mel spectrograms")
 
     val_size = max(1, int(0.15 * len(dataset)))
@@ -98,12 +94,12 @@ def main():
         generator=torch.Generator().manual_seed(0),
     )
 
-    batch_size = 32
+    batch_size = 16
     train_loader = DataLoader(
         train_set,
         batch_size,
         shuffle = True,
-        num_workers = 16,
+        num_workers = 8,
         pin_memory=(device.type == "cuda"),
         collate_fn=collate_fn
     )
@@ -111,7 +107,7 @@ def main():
         val_set,
         batch_size,
         shuffle = False,
-        num_workers = 16,
+        num_workers = 8,
         pin_memory=(device.type == "cuda"),
         collate_fn=collate_fn
     )
@@ -119,7 +115,6 @@ def main():
     criterion = nn.MSELoss()
     learning_rate = 1e-3
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    scheduler = ReduceLROnPlateau(optimizer, mode="min", factor=0.5, patience=5)
     mae_metric = MeanAbsoluteError().to(device)
     r2_metric = R2Score().to(device)
 
@@ -128,9 +123,9 @@ def main():
         "batch_size": batch_size,
         "learning_rate": learning_rate,
         "epochs": epochs,
-        "hidden_size": 1408,
-        "num_layers": 3,
-        "fc_dims": [352],
+        "hidden_size": 512,
+        "num_layers": 2,
+        "fc_dims": [],
     }
     last_checkpoint_path = os.path.join(
         checkpoint_dir, "last_LSTM_small_checkpoint.pt"
@@ -150,10 +145,6 @@ def main():
                 optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
             except (KeyError, ValueError, RuntimeError) as e:
                 print(f"could not restore optimizer state; using a new optimizer ({e})")
-            try:
-                scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
-            except (KeyError, ValueError, RuntimeError) as e:
-                print(f"could not restore scheduler state; using a new scheduler ({e})")
             start_epoch = checkpoint["epoch"]
             best_val_loss = checkpoint["best_val_loss"]
             # Older checkpoints predate hyperparameter logging; assume the
@@ -184,8 +175,6 @@ def main():
             f"val loss {val_loss:.4f} mae {val_mae:.2f} r2 {val_r2:.3f}"
         )
 
-        scheduler.step(val_loss)
-
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             is_best = True
@@ -196,7 +185,6 @@ def main():
             "epoch": epoch,
             "model_state_dict": model.state_dict(),
             "optimizer_state_dict": optimizer.state_dict(),
-            "scheduler_state_dict": scheduler.state_dict(),
             "best_val_loss": best_val_loss,
             "hyperparams": hyperparams,
         }

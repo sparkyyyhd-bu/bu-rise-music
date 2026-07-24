@@ -118,8 +118,9 @@ def checkpoint_matches_model(model, checkpoint):
     return True, "all parameter keys and shapes match"
 
 class MelPopularityDataset(Dataset):
-    def __init__(self, mel_dir, popularity_by_id):
+    def __init__(self, mel_dir, popularity_by_id, normalize=True):
         self.entries = []
+        self.normalize = normalize
         for entry in os.scandir(mel_dir):
             if not entry.is_file() or not entry.name.endswith(MEL_SUFFIX):
                 continue
@@ -137,7 +138,8 @@ class MelPopularityDataset(Dataset):
         mel = torch.load(path)
         if mel.dim() == 3:
             mel = mel.mean(dim=0)  # collapse stereo channels to mono
-        mel = (mel - mel.mean()) / (mel.std() + 1e-5)
+        if self.normalize:
+            mel = (mel - mel.mean()) / (mel.std() + 1e-5)
         target = torch.tensor(popularity / 100.0, dtype=torch.float32)
         return mel, target
     
