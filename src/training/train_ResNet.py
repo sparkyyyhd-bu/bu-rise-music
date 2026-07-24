@@ -6,6 +6,7 @@ import torch.nn.functional as F
 from torch.optim.lr_scheduler import LambdaLR, ReduceLROnPlateau
 from torch.utils.data import DataLoader, random_split
 from torchmetrics import MeanAbsoluteError, R2Score
+from torchvision.models import ResNet50_Weights, resnet50
 
 from training.data_utils import (
     MelPopularityDataset,
@@ -19,112 +20,37 @@ from training.data_utils import (
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-class Bottleneck(nn.Module):
-    """1x1, 3x3, 1x1 residual bottleneck used by ResNet-50."""
-
-    expansion = 4
-
-    def __init__(self, in_channels, out_channels, stride=1):
-        super().__init__()
-        self.conv1 = nn.Conv2d(
-            in_channels,
-            out_channels,
-            kernel_size=1,
-            bias=False,
-        )
-        self.bn1 = nn.BatchNorm2d(out_channels)
-        self.conv2 = nn.Conv2d(
-            out_channels,
-            out_channels,
-            kernel_size=3,
-            stride=stride,
-            padding=1,
-            bias=False,
-        )
-        self.bn2 = nn.BatchNorm2d(out_channels)
-        self.conv3 = nn.Conv2d(
-            out_channels,
-            out_channels * self.expansion,
-            kernel_size=1,
-            bias=False,
-        )
-        self.bn3 = nn.BatchNorm2d(out_channels * self.expansion)
-
-        expanded_channels = out_channels * self.expansion
-        if stride != 1 or in_channels != expanded_channels:
-            self.shortcut = nn.Sequential(
-                nn.Conv2d(
-                    in_channels,
-                    expanded_channels,
-                    kernel_size=1,
-                    stride=stride,
-                    bias=False,
-                ),
-                nn.BatchNorm2d(expanded_channels),
-            )
-        else:
-            self.shortcut = nn.Identity()
-
-    def forward(self, x):
-        identity = self.shortcut(x)
-        x = F.relu(self.bn1(self.conv1(x)), inplace=True)
-        x = F.relu(self.bn2(self.conv2(x)), inplace=True)
-        x = self.bn3(self.conv3(x))
-        return F.relu(x + identity, inplace=True)
-
-
 class PopularityResNet(nn.Module):
-    """ResNet-50 regressor adapted for single-channel mel spectrograms."""
+    """ImageNet-pretrained ResNet-50 fine-tuned on mel spectrograms."""
 
-    def __init__(self, layers=(3, 4, 6, 3), dropout=0.3):
+    def __init__(
+        self,
+        dropout=0.3,
+        weights=ResNet50_Weights.IMAGENET1K_V2,
+    ):
         super().__init__()
-        self.in_channels = 64
-        self.stem = nn.Sequential(
-            nn.Conv2d(
-                1, 64, kernel_size=7, stride=2, padding=3, bias=False
-            ),
-            nn.BatchNorm2d(64),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(kernel_size=3, stride=2, padding=1),
+        self.backbone = resnet50(weights=weights)
+        rgb_conv = self.backbone.conv1
+        self.backbone.conv1 = nn.Conv2d(
+            1,
+            rgb_conv.out_channels,
+            kernel_size=rgb_conv.kernel_size,
+            stride=rgb_conv.stride,
+            padding=rgb_conv.padding,
+            bias=False,
         )
-        self.layer1 = self._make_layer(64, layers[0])
-        self.layer2 = self._make_layer(128, layers[1], stride=2)
-        self.layer3 = self._make_layer(256, layers[2], stride=2)
-        self.layer4 = self._make_layer(512, layers[3], stride=2)
-        self.global_pool = nn.AdaptiveAvgPool2d((1, 1))
+        with torch.no_grad():
+            self.backbone.conv1.weight.copy_(
+                rgb_conv.weight.mean(dim=1, keepdim=True)
+            )
+
+        feature_dim = self.backbone.fc.in_features
+        self.backbone.fc = nn.Identity()
         self.dropout = nn.Dropout(dropout)
-        self.head = nn.Linear(512 * Bottleneck.expansion, 1)
-        self._initialize_weights()
-
-    def _make_layer(self, out_channels, num_blocks, stride=1):
-        blocks = [Bottleneck(self.in_channels, out_channels, stride)]
-        self.in_channels = out_channels * Bottleneck.expansion
-        blocks.extend(
-            Bottleneck(self.in_channels, out_channels)
-            for _ in range(1, num_blocks)
-        )
-        return nn.Sequential(*blocks)
-
-    def _initialize_weights(self):
-        for module in self.modules():
-            if isinstance(module, nn.Conv2d):
-                nn.init.kaiming_normal_(
-                    module.weight, mode="fan_out", nonlinearity="relu"
-                )
-            elif isinstance(module, nn.BatchNorm2d):
-                nn.init.ones_(module.weight)
-                nn.init.zeros_(module.bias)
-            elif isinstance(module, nn.Linear):
-                nn.init.normal_(module.weight, 0, 0.01)
-                nn.init.zeros_(module.bias)
+        self.head = nn.Linear(feature_dim, 1)
 
     def forward(self, x):
-        x = self.stem(x)
-        x = self.layer1(x)
-        x = self.layer2(x)
-        x = self.layer3(x)
-        x = self.layer4(x)
-        x = self.global_pool(x).flatten(1)
+        x = self.backbone(x)
         return torch.sigmoid(self.head(self.dropout(x))).squeeze(1)
 
 
@@ -229,10 +155,18 @@ def main():
 
     model = PopularityResNet().to(device)
     criterion = nn.MSELoss()
-    learning_rate = 1e-3
+    backbone_learning_rate = 1e-4
+    head_learning_rate = 1e-3
     weight_decay = 1e-4
     optimizer = torch.optim.AdamW(
-        model.parameters(), lr=learning_rate, weight_decay=weight_decay
+        [
+            {
+                "params": model.backbone.parameters(),
+                "lr": backbone_learning_rate,
+            },
+            {"params": model.head.parameters(), "lr": head_learning_rate},
+        ],
+        weight_decay=weight_decay,
     )
     scheduler = ReduceLROnPlateau(
         optimizer, mode="min", factor=0.5, patience=5
@@ -248,9 +182,11 @@ def main():
     epochs = 60
     hyperparams = {
         "architecture": "ResNet-50",
-        "layers": [3, 4, 6, 3],
+        "pretrained_weights": "IMAGENET1K_V2",
+        "fine_tune_backbone": True,
         "batch_size": batch_size,
-        "learning_rate": learning_rate,
+        "backbone_learning_rate": backbone_learning_rate,
+        "head_learning_rate": head_learning_rate,
         "weight_decay": weight_decay,
         "epochs": epochs,
         "dropout": 0.3,
