@@ -4,6 +4,7 @@
 #$ -N train_ViT
 #$ -l h_rt=12:00:00
 #$ -pe omp 16
+#$ -l mem_per_core=5G
 #$ -l gpus=1
 #$ -l gpu_c=8.9
 #$ -l gpu_memory=80G

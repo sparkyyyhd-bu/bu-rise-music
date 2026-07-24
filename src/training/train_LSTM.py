@@ -41,25 +41,35 @@ class PopularityLSTM(nn.Module):
         x = torch.sigmoid(self.fc(x))
         return x.squeeze(1)
 
-def run_epoch(model, loader, criterion, mae_metric, r2_metric, optimizer = None):
+def run_epoch(
+    model, loader, criterion, mae_metric, r2_metric, optimizer=None,
+    accumulation_steps=1,
+):
     is_train = optimizer is not None
     model.train(is_train)
     mae_metric.reset()
     r2_metric.reset()
     total_loss = 0.0
 
+    if is_train:
+        optimizer.zero_grad()
     with torch.set_grad_enabled(is_train):
-        for mels, targets in loader:
+        for batch_index, (mels, targets) in enumerate(loader):
             mels = mels.to(device, non_blocking=True)
             targets = targets.to(device, non_blocking=True)
 
             predictions = model(mels)
             loss = criterion(predictions, targets)
             if is_train:
-                optimizer.zero_grad()
-                loss.backward()
-                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-                optimizer.step()
+                (loss / accumulation_steps).backward()
+                should_step = (
+                    (batch_index + 1) % accumulation_steps == 0
+                    or batch_index + 1 == len(loader)
+                )
+                if should_step:
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+                    optimizer.step()
+                    optimizer.zero_grad()
 
             total_loss += loss.item() * mels.size(0)
             detached_predictions = predictions.detach()
@@ -94,7 +104,8 @@ def main():
         generator=torch.Generator().manual_seed(0),
     )
 
-    batch_size = 16
+    batch_size = 64
+    accumulation_steps = 2
     train_loader = DataLoader(
         train_set,
         batch_size,
@@ -121,6 +132,8 @@ def main():
     epochs = 150
     hyperparams = {
         "batch_size": batch_size,
+        "effective_batch_size": batch_size * accumulation_steps,
+        "accumulation_steps": accumulation_steps,
         "learning_rate": learning_rate,
         "epochs": epochs,
         "hidden_size": 512,
@@ -164,7 +177,8 @@ def main():
 
     for epoch in range(start_epoch + 1, start_epoch + epochs + 1):
         train_loss, train_mae, train_r2 = run_epoch(
-            model, train_loader, criterion, mae_metric, r2_metric, optimizer
+            model, train_loader, criterion, mae_metric, r2_metric, optimizer,
+            accumulation_steps,
         )
         val_loss, val_mae, val_r2 = run_epoch(
             model, val_loader, criterion, mae_metric, r2_metric
