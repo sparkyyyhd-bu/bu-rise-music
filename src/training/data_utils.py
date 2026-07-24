@@ -19,6 +19,8 @@ def spec_augment(
     probability=0.8,
     max_frequency_width=10,
     max_time_width=80,
+    frequency_masks=1,
+    time_masks=1,
 ):
     """Apply independent frequency and time masks to each training example.
 
@@ -42,21 +44,20 @@ def spec_augment(
         if torch.rand((), device=device) >= probability:
             continue
 
-        frequency_width = int(
-            torch.randint(
-                0, min(max_frequency_width, frequency_size) + 1, (), device=device
-            ).item()
-        )
-        time_width = int(
-            torch.randint(
-                0, min(max_time_width, time_size) + 1, (), device=device
-            ).item()
-        )
-
         index = [slice(None)] * augmented.ndim
         index[0] = batch_index
 
-        if frequency_width:
+        for _ in range(frequency_masks):
+            frequency_width = int(
+                torch.randint(
+                    0,
+                    min(max_frequency_width, frequency_size) + 1,
+                    (),
+                    device=device,
+                ).item()
+            )
+            if not frequency_width:
+                continue
             frequency_start = int(
                 torch.randint(
                     0, frequency_size - frequency_width + 1, (), device=device
@@ -68,7 +69,14 @@ def spec_augment(
             augmented[tuple(index)] = 0.0
             index[frequency_dim] = slice(None)
 
-        if time_width:
+        for _ in range(time_masks):
+            time_width = int(
+                torch.randint(
+                    0, min(max_time_width, time_size) + 1, (), device=device
+                ).item()
+            )
+            if not time_width:
+                continue
             time_start = int(
                 torch.randint(0, time_size - time_width + 1, (), device=device).item()
             )

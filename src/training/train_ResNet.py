@@ -6,7 +6,7 @@ import torch.nn.functional as F
 from torch.optim.lr_scheduler import LambdaLR, ReduceLROnPlateau
 from torch.utils.data import DataLoader, random_split
 from torchmetrics import MeanAbsoluteError, R2Score
-from torchvision.models import ResNet50_Weights, resnet50
+from torchvision.models import ResNet34_Weights, resnet34
 
 from training.data_utils import (
     MelPopularityDataset,
@@ -21,15 +21,16 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class PopularityResNet(nn.Module):
-    """ImageNet-pretrained ResNet-50 fine-tuned on mel spectrograms."""
+    """ImageNet-pretrained ResNet-34 fine-tuned on mel spectrograms."""
 
     def __init__(
         self,
-        dropout=0.3,
-        weights=ResNet50_Weights.IMAGENET1K_V2,
+        dropout=0.5,
+        weights=ResNet34_Weights.IMAGENET1K_V1,
     ):
         super().__init__()
-        self.backbone = resnet50(weights=weights)
+        self.backbone = resnet34(weights=weights)
+        self.trainable_stage = "all"
         rgb_conv = self.backbone.conv1
         self.backbone.conv1 = nn.Conv2d(
             1,
@@ -49,6 +50,28 @@ class PopularityResNet(nn.Module):
         self.dropout = nn.Dropout(dropout)
         self.head = nn.Linear(feature_dim, 1)
 
+    def set_trainable_stage(self, stage):
+        """Train the head, then layer4, then the full pretrained backbone."""
+        if stage not in {"head", "layer4", "all"}:
+            raise ValueError(f"unknown trainable stage: {stage}")
+        self.trainable_stage = stage
+        for parameter in self.backbone.parameters():
+            parameter.requires_grad = stage == "all"
+        if stage == "layer4":
+            for parameter in self.backbone.layer4.parameters():
+                parameter.requires_grad = True
+        for parameter in self.head.parameters():
+            parameter.requires_grad = True
+
+    def train(self, mode=True):
+        super().train(mode)
+        if mode and self.trainable_stage != "all":
+            # Keep frozen BatchNorm running statistics fixed as well as weights.
+            self.backbone.eval()
+            if self.trainable_stage == "layer4":
+                self.backbone.layer4.train()
+        return self
+
     def forward(self, x):
         x = self.backbone(x)
         return torch.sigmoid(self.head(self.dropout(x))).squeeze(1)
@@ -61,6 +84,26 @@ def collate_fn(batch):
         [F.pad(mel, (0, max_frames - mel.shape[-1])) for mel in mels]
     )
     return padded.unsqueeze(1), torch.stack(targets)
+
+
+def augment_mels(mels):
+    """Apply stronger masking plus small waveform-independent perturbations."""
+    mels = spec_augment(
+        mels,
+        frequency_dim=2,
+        time_dim=3,
+        probability=0.9,
+        max_frequency_width=16,
+        max_time_width=120,
+        frequency_masks=2,
+        time_masks=2,
+    )
+    max_shift = max(1, int(0.05 * mels.shape[-1]))
+    shift = int(
+        torch.randint(-max_shift, max_shift + 1, (), device=mels.device).item()
+    )
+    mels = torch.roll(mels, shifts=shift, dims=-1)
+    return mels + 0.01 * torch.randn_like(mels)
 
 
 def run_epoch(
@@ -86,7 +129,7 @@ def run_epoch(
             mels = mels.to(device, non_blocking=True)
             targets = targets.to(device, non_blocking=True)
             if is_train:
-                mels = spec_augment(mels, frequency_dim=2, time_dim=3)
+                mels = augment_mels(mels)
 
             predictions = model(mels)
             loss = criterion(predictions, targets)
@@ -154,10 +197,13 @@ def main():
     val_loader = DataLoader(val_set, shuffle=False, **loader_options)
 
     model = PopularityResNet().to(device)
+    head_only_epochs = 3
+    layer4_only_epochs = 7
+    model.set_trainable_stage("head")
     criterion = nn.MSELoss()
     backbone_learning_rate = 1e-4
     head_learning_rate = 1e-3
-    weight_decay = 1e-4
+    weight_decay = 5e-4
     optimizer = torch.optim.AdamW(
         [
             {
@@ -180,17 +226,33 @@ def main():
     r2_metric = R2Score().to(device)
 
     epochs = 60
+    early_stopping_patience = 10
+    early_stopping_min_delta = 1e-4
     hyperparams = {
-        "architecture": "ResNet-50",
-        "pretrained_weights": "IMAGENET1K_V2",
-        "fine_tune_backbone": True,
+        "architecture": "ResNet-34",
+        "pretrained_weights": "IMAGENET1K_V1",
+        "fine_tuning": {
+            "head_only_epochs": head_only_epochs,
+            "layer4_only_through_epoch": layer4_only_epochs,
+        },
         "batch_size": batch_size,
         "backbone_learning_rate": backbone_learning_rate,
         "head_learning_rate": head_learning_rate,
         "weight_decay": weight_decay,
         "epochs": epochs,
-        "dropout": 0.3,
+        "dropout": 0.5,
         "warmup_epochs": warmup_epochs,
+        "early_stopping_patience": early_stopping_patience,
+        "early_stopping_min_delta": early_stopping_min_delta,
+        "augmentation": {
+            "probability": 0.9,
+            "frequency_masks": 2,
+            "max_frequency_width": 16,
+            "time_masks": 2,
+            "max_time_width": 120,
+            "max_time_shift_fraction": 0.05,
+            "gaussian_noise_std": 0.01,
+        },
     }
     last_checkpoint_path = os.path.join(
         checkpoint_dir, "last_ResNet_checkpoint.pt"
@@ -200,6 +262,7 @@ def main():
     )
     start_epoch = 0
     best_val_loss = float("inf")
+    epochs_without_improvement = 0
 
     if os.path.exists(last_checkpoint_path):
         checkpoint = torch.load(
@@ -219,6 +282,9 @@ def main():
                     print(f"could not restore {state_name}: {error}")
             start_epoch = checkpoint["epoch"]
             best_val_loss = checkpoint["best_val_loss"]
+            epochs_without_improvement = checkpoint.get(
+                "epochs_without_improvement", 0
+            )
             hyperparams = checkpoint.get("hyperparams", hyperparams)
             print(
                 f"continuing from epoch {start_epoch} in {last_checkpoint_path}",
@@ -234,6 +300,19 @@ def main():
 
     epoch = start_epoch
     for epoch in range(start_epoch + 1, epochs + 1):
+        if epoch <= head_only_epochs:
+            trainable_stage = "head"
+        elif epoch <= layer4_only_epochs:
+            trainable_stage = "layer4"
+        else:
+            trainable_stage = "all"
+        if model.trainable_stage != trainable_stage:
+            model.set_trainable_stage(trainable_stage)
+            print(
+                f"epoch {epoch:03d} | trainable stage: {trainable_stage}",
+                flush=True,
+            )
+
         train_stats = run_epoch(
             model,
             train_loader,
@@ -259,9 +338,12 @@ def main():
 
         if epoch > warmup_epochs:
             scheduler.step(val_loss)
-        is_best = val_loss < best_val_loss
+        is_best = val_loss < best_val_loss - early_stopping_min_delta
         if is_best:
             best_val_loss = val_loss
+            epochs_without_improvement = 0
+        else:
+            epochs_without_improvement += 1
 
         checkpoint = {
             "epoch": epoch,
@@ -270,11 +352,19 @@ def main():
             "scheduler_state_dict": scheduler.state_dict(),
             "warmup_scheduler_state_dict": warmup_scheduler.state_dict(),
             "best_val_loss": best_val_loss,
+            "epochs_without_improvement": epochs_without_improvement,
             "hyperparams": hyperparams,
         }
         torch.save(checkpoint, last_checkpoint_path)
         if is_best:
             torch.save(checkpoint, best_checkpoint_path)
+        if epochs_without_improvement >= early_stopping_patience:
+            print(
+                f"early stopping after {early_stopping_patience} epochs "
+                "without meaningful validation improvement",
+                flush=True,
+            )
+            break
 
     print(
         f"finished epoch {epoch}; best val loss {best_val_loss:.4f}; "
