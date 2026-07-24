@@ -10,9 +10,9 @@ from torchvision.models import ResNet34_Weights, resnet34
 
 from training.data_utils import (
     MelPopularityDataset,
+    augment_mels,
     checkpoint_matches_model,
     load_popularity_by_id,
-    spec_augment,
     sync_to_local_scratch,
 )
 
@@ -84,26 +84,6 @@ def collate_fn(batch):
         [F.pad(mel, (0, max_frames - mel.shape[-1])) for mel in mels]
     )
     return padded.unsqueeze(1), torch.stack(targets)
-
-
-def augment_mels(mels):
-    """Apply stronger masking plus small waveform-independent perturbations."""
-    mels = spec_augment(
-        mels,
-        frequency_dim=2,
-        time_dim=3,
-        probability=0.9,
-        max_frequency_width=16,
-        max_time_width=120,
-        frequency_masks=2,
-        time_masks=2,
-    )
-    max_shift = max(1, int(0.05 * mels.shape[-1]))
-    shift = int(
-        torch.randint(-max_shift, max_shift + 1, (), device=mels.device).item()
-    )
-    mels = torch.roll(mels, shifts=shift, dims=-1)
-    return mels + 0.01 * torch.randn_like(mels)
 
 
 def run_epoch(

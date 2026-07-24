@@ -86,6 +86,26 @@ def spec_augment(
     return augmented
 
 
+def augment_mels(mels):
+    """Apply the shared strong spectrogram augmentation used for training."""
+    mels = spec_augment(
+        mels,
+        frequency_dim=2,
+        time_dim=3,
+        probability=0.9,
+        max_frequency_width=16,
+        max_time_width=120,
+        frequency_masks=2,
+        time_masks=2,
+    )
+    max_shift = max(1, int(0.05 * mels.shape[-1]))
+    shift = int(
+        torch.randint(-max_shift, max_shift + 1, (), device=mels.device).item()
+    )
+    mels = torch.roll(mels, shifts=shift, dims=-1)
+    return mels + 0.01 * torch.randn_like(mels)
+
+
 def checkpoint_matches_model(model, checkpoint):
     """Check state-dict keys and tensor shapes without modifying the model."""
     if not isinstance(checkpoint, dict):

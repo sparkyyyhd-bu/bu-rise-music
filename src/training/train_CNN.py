@@ -8,9 +8,9 @@ from torch.optim.lr_scheduler import LambdaLR, ReduceLROnPlateau
 from torchmetrics import MeanAbsoluteError, R2Score
 from training.data_utils import (
     MelPopularityDataset,
+    augment_mels,
     checkpoint_matches_model,
     load_popularity_by_id,
-    spec_augment,
     sync_to_local_scratch,
 )
 
@@ -47,7 +47,7 @@ class PopularityCNN(nn.Module):
         self.fc1 = nn.Linear(512 * 2 * 2, 512)
         self.fc2 = nn.Linear(512, 64)
         self.fc3 = nn.Linear(64, 1)
-        self.dropout = nn.Dropout(0.4)
+        self.dropout = nn.Dropout(0.5)
 
     def forward(self, x):
         x = self.pool(F.relu(self.bn1(self.conv1(x))))
@@ -77,7 +77,7 @@ def run_epoch(model, loader, criterion, mae_metric, r2_metric, optimizer=None, w
             targets = targets.to(device, non_blocking=True)
 
             if is_train:
-                mels = spec_augment(mels, frequency_dim=2, time_dim=3)
+                mels = augment_mels(mels)
             predictions = model(mels)
             loss = criterion(predictions, targets)
 
@@ -173,7 +173,16 @@ def main():
         "conv_channels": [64, 128, 256, 512],
         "global_pool": [2, 2],
         "fc_dims": [512, 64],
-        "dropout": 0.4,
+        "dropout": 0.5,
+        "augmentation": {
+            "probability": 0.9,
+            "frequency_masks": 2,
+            "max_frequency_width": 16,
+            "time_masks": 2,
+            "max_time_width": 120,
+            "max_time_shift_fraction": 0.05,
+            "gaussian_noise_std": 0.01,
+        },
         "warmup_epochs": warmup_epochs,
     }
     last_checkpoint_path = os.path.join(checkpoint_dir, "last_CNN_checkpoint.pt")

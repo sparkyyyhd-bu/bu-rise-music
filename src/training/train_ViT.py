@@ -11,9 +11,9 @@ from torchvision.models import ViT_B_16_Weights, vit_b_16
 from audio_config import MAX_FRAMES, N_MELS
 from training.data_utils import (
     MelPopularityDataset,
+    augment_mels,
     checkpoint_matches_model,
     load_popularity_by_id,
-    spec_augment,
     sync_to_local_scratch,
 )
 
@@ -34,7 +34,7 @@ class PopularityViT(nn.Module):
         image_size=(N_MELS, MAX_FRAMES),
         patch_size=(16, 16),
         patch_stride=(10, 10),
-        dropout=0.1,
+        dropout=0.5,
         weights=ViT_B_16_Weights.IMAGENET1K_SWAG_E2E_V1,
     ):
         super().__init__()
@@ -149,7 +149,7 @@ def run_epoch(
             mels = mels.to(device, non_blocking=True)
             targets = targets.to(device, non_blocking=True)
             if is_train:
-                mels = spec_augment(mels, frequency_dim=2, time_dim=3)
+                mels = augment_mels(mels)
             with torch.autocast(device_type=device.type, enabled=device.type == "cuda"):
                 predictions = model(mels)
                 loss = criterion(predictions, targets)
@@ -266,7 +266,16 @@ def main():
         "num_heads": 12,
         "num_layers": 12,
         "mlp_dim": 3072,
-        "dropout": 0.1,
+        "dropout": 0.5,
+        "augmentation": {
+            "probability": 0.9,
+            "frequency_masks": 2,
+            "max_frequency_width": 16,
+            "time_masks": 2,
+            "max_time_width": 120,
+            "max_time_shift_fraction": 0.05,
+            "gaussian_noise_std": 0.01,
+        },
         "warmup_epochs": warmup_epochs,
         "fine_tune_encoder": True,
     }
