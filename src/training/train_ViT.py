@@ -6,6 +6,7 @@ import torch.nn.functional as F
 from torch.optim.lr_scheduler import LambdaLR, ReduceLROnPlateau
 from torch.utils.data import DataLoader, random_split
 from torchmetrics import MeanAbsoluteError, R2Score
+from torchvision.models import ViT_B_16_Weights, vit_b_16
 
 from audio_config import MAX_FRAMES, N_MELS
 from training.data_utils import (
@@ -20,87 +21,93 @@ from training.data_utils import (
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-class PatchEmbedding(nn.Module):
-    """Turn a mel spectrogram into a sequence of overlapping 2-D patches."""
-
-    def __init__(self, patch_size=(16, 16), patch_stride=(16, 16), embed_dim=384):
-        super().__init__()
-        self.patch_size = patch_size
-        self.patch_stride = patch_stride
-        self.projection = nn.Conv2d(
-            1, embed_dim, kernel_size=patch_size, stride=patch_stride
-        )
-
-    def forward(self, x):
-        x = self.projection(x)
-        return x.flatten(2).transpose(1, 2)
-
-
 class PopularityViT(nn.Module):
-    """Vision Transformer regressor for normalized song popularity."""
+    """ImageNet-pretrained Audio Spectrogram Transformer regressor.
+
+    This follows Gong et al. (2021): adapt a ViT-B/16 encoder to a
+    single-channel spectrogram, use overlapping patches, resize its 2-D
+    positional embeddings, replace the task head, and fine-tune end to end.
+    """
 
     def __init__(
         self,
         image_size=(N_MELS, MAX_FRAMES),
         patch_size=(16, 16),
-        patch_stride=(16, 16),
-        embed_dim=384,
-        num_heads=6,
-        num_layers=6,
-        mlp_dim=1536,
+        patch_stride=(10, 10),
         dropout=0.1,
+        weights=ViT_B_16_Weights.IMAGENET1K_SWAG_E2E_V1,
     ):
         super().__init__()
-        if embed_dim % num_heads != 0:
-            raise ValueError("embed_dim must be divisible by num_heads")
+        if patch_size != (16, 16):
+            raise ValueError("pretrained ViT-B/16 requires 16x16 patches")
 
-        self.patch_embedding = PatchEmbedding(patch_size, patch_stride, embed_dim)
-        grid_height = 1 + (image_size[0] - patch_size[0]) // patch_stride[0]
-        grid_width = 1 + (image_size[1] - patch_size[1]) // patch_stride[1]
-        num_patches = grid_height * grid_width
-
-        self.class_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
-        self.position_embedding = nn.Parameter(
-            torch.zeros(1, num_patches + 1, embed_dim)
+        pretrained_vit = vit_b_16(weights=weights, dropout=dropout)
+        pretrained_projection = pretrained_vit.conv_proj
+        self.patch_embedding = nn.Conv2d(
+            1,
+            pretrained_projection.out_channels,
+            kernel_size=patch_size,
+            stride=patch_stride,
         )
-        self.embedding_dropout = nn.Dropout(dropout)
+        # AST averages the RGB kernels to transfer the image patch projection.
+        # Summing would be equivalent to copying a mono spectrogram into RGB;
+        # averaging follows the paper exactly and keeps the inherited scale tame.
+        with torch.no_grad():
+            self.patch_embedding.weight.copy_(
+                pretrained_projection.weight.mean(dim=1, keepdim=True)
+            )
+            self.patch_embedding.bias.copy_(pretrained_projection.bias)
 
-        encoder_layer = nn.TransformerEncoderLayer(
-            d_model=embed_dim,
-            nhead=num_heads,
-            dim_feedforward=mlp_dim,
-            dropout=dropout,
-            activation="gelu",
-            batch_first=True,
-            norm_first=True,
+        self.class_token = pretrained_vit.class_token
+        self.encoder = pretrained_vit.encoder
+        self.grid_size = (
+            1 + (image_size[0] - patch_size[0]) // patch_stride[0],
+            1 + (image_size[1] - patch_size[1]) // patch_stride[1],
         )
-        self.encoder = nn.TransformerEncoder(
-            encoder_layer, num_layers=num_layers, norm=nn.LayerNorm(embed_dim)
+        adapted_position_embedding = self._adapt_position_embedding(
+            self.encoder.pos_embedding,
+            source_grid_size=pretrained_vit.image_size // pretrained_vit.patch_size,
+            target_grid_size=self.grid_size,
         )
-        self.head = nn.Linear(embed_dim, 1)
-        self._initialize_weights()
-
-    def _initialize_weights(self):
-        nn.init.trunc_normal_(self.position_embedding, std=0.02)
-        nn.init.trunc_normal_(self.class_token, std=0.02)
-        nn.init.trunc_normal_(self.patch_embedding.projection.weight, std=0.02)
-        if self.patch_embedding.projection.bias is not None:
-            nn.init.zeros_(self.patch_embedding.projection.bias)
+        self.encoder.pos_embedding = nn.Parameter(adapted_position_embedding)
+        self.head = nn.Linear(pretrained_vit.hidden_dim, 1)
         nn.init.trunc_normal_(self.head.weight, std=0.02)
         nn.init.zeros_(self.head.bias)
 
+    @staticmethod
+    def _adapt_position_embedding(
+        position_embedding, source_grid_size, target_grid_size
+    ):
+        """Bilinearly resize ViT's 2-D positions while preserving [CLS]."""
+        class_position = position_embedding[:, :1]
+        patch_positions = position_embedding[:, 1:]
+        hidden_dim = patch_positions.shape[-1]
+        patch_positions = patch_positions.reshape(
+            1, source_grid_size, source_grid_size, hidden_dim
+        ).permute(0, 3, 1, 2)
+        patch_positions = F.interpolate(
+            patch_positions,
+            size=target_grid_size,
+            mode="bilinear",
+            align_corners=False,
+        )
+        patch_positions = patch_positions.permute(0, 2, 3, 1).reshape(
+            1, target_grid_size[0] * target_grid_size[1], hidden_dim
+        )
+        return torch.cat((class_position, patch_positions), dim=1)
+
     def forward(self, x):
-        x = self.patch_embedding(x)
-        if x.shape[1] + 1 != self.position_embedding.shape[1]:
+        x = self.patch_embedding(x).flatten(2).transpose(1, 2)
+        expected_patches = self.grid_size[0] * self.grid_size[1]
+        if x.shape[1] != expected_patches:
             raise ValueError(
                 "input produced a different number of patches than image_size; "
                 "pad or crop it with collate_fn"
             )
         class_token = self.class_token.expand(x.shape[0], -1, -1)
         x = torch.cat((class_token, x), dim=1)
-        x = self.embedding_dropout(x + self.position_embedding)
         x = self.encoder(x)
-        return self.head(x[:, 0]).squeeze(1)
+        return torch.sigmoid(self.head(x[:, 0])).squeeze(1)
 
 
 def to_max_frames(mel):
@@ -205,7 +212,7 @@ def main():
         generator=torch.Generator().manual_seed(0),
     )
 
-    batch_size = 32
+    batch_size = 12
     loader_options = {
         "batch_size": batch_size,
         "num_workers": 16,
@@ -217,7 +224,7 @@ def main():
 
     model = PopularityViT().to(device)
     criterion = nn.MSELoss()
-    learning_rate = 1e-4
+    learning_rate = 5e-5
     optimizer = torch.optim.AdamW(
         model.parameters(), lr=learning_rate, weight_decay=1e-4
     )
@@ -241,14 +248,17 @@ def main():
         "epochs": epochs,
         "image_size": [N_MELS, MAX_FRAMES],
         "patch_size": [16, 16],
-        "patch_stride": [16, 16],
-        "patch_overlap": [0, 0],
-        "embed_dim": 384,
-        "num_heads": 6,
-        "num_layers": 6,
-        "mlp_dim": 1536,
+        "patch_stride": [10, 10],
+        "patch_overlap": [6, 6],
+        "encoder": "vit_b_16",
+        "pretrained_weights": "IMAGENET1K_SWAG_E2E_V1",
+        "embed_dim": 768,
+        "num_heads": 12,
+        "num_layers": 12,
+        "mlp_dim": 3072,
         "dropout": 0.1,
         "warmup_epochs": warmup_epochs,
+        "fine_tune_encoder": True,
     }
     last_checkpoint_path = os.path.join(
         checkpoint_dir, "last_ViT_checkpoint.pt"
