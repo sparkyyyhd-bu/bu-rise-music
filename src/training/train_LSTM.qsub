@@ -43,7 +43,7 @@ export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 WALLTIME_SECONDS=$((12*3600))
 WARN_BUFFER_SECONDS=300
 python -u src/training/print_best_stats.py \
-    --checkpoint "/net/scc1/scratch/$USER/checkpoints/last_LSTM_checkpoint.pt" \
+    --checkpoint "/net/scc1/scratch/$USER/checkpoints/last_LSTM_small_checkpoint.pt" \
     --sleep-seconds $((WALLTIME_SECONDS - WARN_BUFFER_SECONDS)) &
 WATCHDOG_PID=$!
 trap 'kill "$WATCHDOG_PID" 2>/dev/null' EXIT
