@@ -107,26 +107,17 @@ def augment_mels(mels):
 
 
 def augment_vit_mels(mels):
-    """Apply the strongest spectrogram augmentation policy to ViT batches."""
-    mels = spec_augment(
+    """Apply mild masking without overwhelming the pretrained ViT features."""
+    return spec_augment(
         mels,
         frequency_dim=2,
         time_dim=3,
-        probability=1.0,
-        max_frequency_width=24,
-        max_time_width=180,
-        frequency_masks=3,
-        time_masks=3,
+        probability=0.8,
+        max_frequency_width=10,
+        max_time_width=80,
+        frequency_masks=1,
+        time_masks=1,
     )
-    max_shift = max(1, int(0.1 * mels.shape[-1]))
-    shift = int(
-        torch.randint(-max_shift, max_shift + 1, (), device=mels.device).item()
-    )
-    mels = torch.roll(mels, shifts=shift, dims=-1)
-
-    batch_shape = (mels.shape[0],) + (1,) * (mels.ndim - 1)
-    gains = torch.empty(batch_shape, device=mels.device).uniform_(0.85, 1.15)
-    return mels * gains + 0.02 * torch.randn_like(mels)
 
 
 def augment_lstm_mels(

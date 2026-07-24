@@ -34,8 +34,8 @@ class PopularityViT(nn.Module):
         image_size=(N_MELS, MAX_FRAMES),
         patch_size=(16, 16),
         patch_stride=(10, 10),
-        dropout=0.7,
-        attention_dropout=0.3,
+        dropout=0.1,
+        attention_dropout=0.0,
         weights=ViT_B_16_Weights.IMAGENET1K_SWAG_E2E_V1,
     ):
         super().__init__()
@@ -274,18 +274,15 @@ def main():
         "num_heads": 12,
         "num_layers": 12,
         "mlp_dim": 3072,
-        "dropout": 0.7,
-        "attention_dropout": 0.3,
-        "head_dropout": 0.7,
+        "dropout": 0.1,
+        "attention_dropout": 0.0,
+        "head_dropout": 0.1,
         "augmentation": {
-            "probability": 1.0,
-            "frequency_masks": 3,
-            "max_frequency_width": 24,
-            "time_masks": 3,
-            "max_time_width": 180,
-            "max_time_shift_fraction": 0.1,
-            "gain_range": [0.85, 1.15],
-            "gaussian_noise_std": 0.02,
+            "probability": 0.8,
+            "frequency_masks": 1,
+            "max_frequency_width": 10,
+            "time_masks": 1,
+            "max_time_width": 80,
         },
         "warmup_epochs": warmup_epochs,
         "fine_tune_encoder": True,
@@ -315,11 +312,17 @@ def main():
                     print(f"could not restore {state_name}: {error}")
             start_epoch = checkpoint["epoch"]
             best_val_loss = checkpoint["best_val_loss"]
-            hyperparams = checkpoint.get("hyperparams", hyperparams)
+            checkpoint_hyperparams = checkpoint.get("hyperparams")
             print(
                 f"continuing from epoch {start_epoch} in {last_checkpoint_path}",
                 flush=True,
             )
+            if checkpoint_hyperparams != hyperparams:
+                print(
+                    "training settings changed since the checkpoint; "
+                    "continuing with the current settings",
+                    flush=True,
+                )
             print(f"hyperparameters: {hyperparams}", flush=True)
         else:
             print(
