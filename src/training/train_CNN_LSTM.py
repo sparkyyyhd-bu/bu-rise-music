@@ -19,13 +19,6 @@ if torch.cuda.is_available():
 else:
     device = torch.device("cpu")
 
-network_mel_dir = os.path.join("/net/scc1/scratch", os.environ["USER"], "mel_spectrograms")
-local_scratch_dir = os.path.join("/scratch", os.environ["USER"])
-checkpoint_dir = os.path.join("/net/scc1/scratch", os.environ["USER"], "checkpoints")
-os.makedirs(checkpoint_dir, exist_ok=True)
-mel_dir = sync_to_local_scratch(network_mel_dir, local_scratch_dir)
-
-
 class PopularityCNNLSTM(nn.Module):
     def __init__(self):
         super().__init__()
@@ -131,6 +124,16 @@ def collate_fn(batch):
 
 def main():
     torch.manual_seed(0)
+    network_mel_dir = os.path.join(
+        "/net/scc1/scratch", os.environ["USER"], "mel_spectrograms"
+    )
+    local_scratch_dir = os.path.join("/scratch", os.environ["USER"])
+    checkpoint_dir = os.path.join(
+        "/net/scc1/scratch", os.environ["USER"], "checkpoints"
+    )
+    os.makedirs(checkpoint_dir, exist_ok=True)
+    mel_dir = sync_to_local_scratch(network_mel_dir, local_scratch_dir)
+
     popularity_by_id = load_popularity_by_id()
     dataset = MelPopularityDataset(mel_dir, popularity_by_id)
     print(f"loaded {len(dataset)} labeled mel spectrograms")
