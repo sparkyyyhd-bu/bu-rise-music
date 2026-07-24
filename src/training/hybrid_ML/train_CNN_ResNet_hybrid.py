@@ -1,4 +1,4 @@
-"""Train and compare hybrid regressors using CNN and audio features."""
+"""Train hybrid regressors using CNN, ResNet, and audio features."""
 
 import argparse
 import json
@@ -33,8 +33,9 @@ from xgboost import XGBRegressor
 REPO_ROOT = Path(__file__).resolve().parents[3]
 USER = os.environ["USER"]
 CHECKPOINT_DIR = Path("/net/scc1/scratch") / USER / "checkpoints"
-EMBEDDINGS_PATH = CHECKPOINT_DIR / "CNN_embeddings.npz"
-OUTPUT_PATH = CHECKPOINT_DIR / "best_CNN_hybrid_model.joblib"
+CNN_EMBEDDINGS_PATH = CHECKPOINT_DIR / "CNN_embeddings.npz"
+RESNET_EMBEDDINGS_PATH = CHECKPOINT_DIR / "ResNet_embeddings.npz"
+OUTPUT_PATH = CHECKPOINT_DIR / "best_CNN_ResNet_hybrid_model.joblib"
 TRACKS_CSV = (
     REPO_ROOT
     / "data"
@@ -80,13 +81,14 @@ SPOTIFY_AUDIO_FEATURES = [
 ]
 
 
-def load_embeddings():
-    with np.load(EMBEDDINGS_PATH, allow_pickle=False) as cache:
+def load_embeddings(path, expected_dimensions, label):
+    with np.load(path, allow_pickle=False) as cache:
         track_ids = cache["track_ids"].astype(str)
         embeddings = cache["embeddings"].astype(np.float32, copy=False)
-    if embeddings.ndim != 2 or embeddings.shape[1] != 64:
+    if embeddings.ndim != 2 or embeddings.shape[1] != expected_dimensions:
         raise ValueError(
-            f"expected embeddings with shape (tracks, 64), got {embeddings.shape}"
+            f"expected {label} embeddings with shape "
+            f"(tracks, {expected_dimensions}), got {embeddings.shape}"
         )
     if len(track_ids) != len(embeddings):
         raise ValueError("embedding and track ID counts do not match")
@@ -303,7 +305,12 @@ def main():
             f"unknown models: {', '.join(unknown_models)}; choices are "
             f"{', '.join(available_models)}"
         )
-    track_ids, embeddings = load_embeddings()
+    track_ids, cnn_embeddings = load_embeddings(
+        CNN_EMBEDDINGS_PATH, 64, "CNN"
+    )
+    resnet_track_ids, resnet_embeddings = load_embeddings(
+        RESNET_EMBEDDINGS_PATH, 512, "ResNet"
+    )
 
     val_size = max(1, int(0.15 * len(track_ids)))
     test_size = max(1, int(0.15 * len(track_ids)))
@@ -322,8 +329,20 @@ def main():
     val_indices = np.asarray(val_subset.indices)
 
     cnn_feature_names = [f"cnn_{index:02d}" for index in range(64)]
-    embedding_frame = pd.DataFrame(embeddings, columns=cnn_feature_names)
-    embedding_frame.insert(0, "id", track_ids)
+    resnet_feature_names = [
+        f"resnet_{index:03d}" for index in range(512)
+    ]
+    cnn_frame = pd.DataFrame(cnn_embeddings, columns=cnn_feature_names)
+    cnn_frame.insert(0, "id", track_ids)
+    resnet_frame = pd.DataFrame(
+        resnet_embeddings, columns=resnet_feature_names
+    )
+    resnet_frame.insert(0, "id", resnet_track_ids)
+    embedding_frame = cnn_frame.merge(
+        resnet_frame, on="id", how="inner", validate="one_to_one"
+    )
+    if embedding_frame.empty:
+        raise ValueError("CNN and ResNet embedding caches have no IDs in common")
     tabular, audio_feature_names = load_audio_features()
     combined = embedding_frame.merge(
         tabular, on="id", how="inner", validate="one_to_one"
@@ -336,7 +355,11 @@ def main():
     if train.empty or validation.empty:
         raise ValueError("no cached IDs overlap the tabular audio features")
 
-    feature_names = [*cnn_feature_names, *audio_feature_names]
+    feature_names = [
+        *cnn_feature_names,
+        *resnet_feature_names,
+        *audio_feature_names,
+    ]
     print(
         f"matched {len(train)} training and {len(validation)} validation tracks; "
         f"using {len(feature_names)} features",
@@ -404,8 +427,10 @@ def main():
         "model_name": best_name,
         "feature_names": feature_names,
         "cnn_feature_names": cnn_feature_names,
+        "resnet_feature_names": resnet_feature_names,
         "audio_feature_names": audio_feature_names,
-        "embeddings_path": str(EMBEDDINGS_PATH),
+        "cnn_embeddings_path": str(CNN_EMBEDDINGS_PATH),
+        "resnet_embeddings_path": str(RESNET_EMBEDDINGS_PATH),
         "split_seed": 0,
         "random_seed": RANDOM_SEED,
         "results": results,

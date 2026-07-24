@@ -1,7 +1,7 @@
 #!/bin/bash -l
 
 #$ -P rise-grid
-#$ -N train_CNN_hybrid
+#$ -N train_CNN_ResNet_hybrid
 #$ -l h_rt=04:00:00
 #$ -pe omp 16
 #$ -l mem_per_core=5G
@@ -11,8 +11,8 @@ module load python3/3.10.12
 cd "$SGE_O_WORKDIR"
 
 mkdir -p "$SGE_O_WORKDIR/logs"
-exec >>"$SGE_O_WORKDIR/logs/train_CNN_hybrid.${JOB_ID}.qlog" \
-     2>>"$SGE_O_WORKDIR/logs/train_CNN_hybrid.${JOB_ID}.err"
+exec >>"$SGE_O_WORKDIR/logs/train_CNN_ResNet_hybrid.${JOB_ID}.qlog" \
+     2>>"$SGE_O_WORKDIR/logs/train_CNN_ResNet_hybrid.${JOB_ID}.err"
 echo "job ${JOB_ID} started on $(hostname) at $(date)"
 
 PROJECT_STORAGE="${PROJECT_STORAGE:-/project/rise-grid/$USER}"
@@ -28,4 +28,4 @@ pip install --upgrade -r requirements.txt
 
 export PYTHONPATH="$SGE_O_WORKDIR/src:$PYTHONPATH"
 
-python -u src/training/hybrid_ML/train_CNN_hybrid.py
+python -u src/training/hybrid_ML/train_CNN_ResNet_hybrid.py
