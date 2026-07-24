@@ -106,6 +106,60 @@ def augment_mels(mels):
     return mels + 0.01 * torch.randn_like(mels)
 
 
+def augment_lstm_mels(
+    mels,
+    probability=0.8,
+    max_gain_change=0.05,
+    max_offset_std=0.02,
+    noise_std=0.01,
+):
+    """Mildly perturb (batch, time, mel) sequences without masking time spans.
+
+    The same affine perturbation is used at every time step in an example so
+    temporal structure stays intact. Noise is scaled to each example's
+    standard deviation, and padded frames remain exactly zero.
+    """
+    if mels.ndim != 3:
+        raise ValueError("expected LSTM input shaped (batch, time, mel)")
+
+    augmented = mels.clone()
+    valid_frames = augmented.ne(0).any(dim=2, keepdim=True)
+    apply = (
+        torch.rand(
+            augmented.shape[0], 1, 1, device=augmented.device
+        ) < probability
+    )
+    apply &= valid_frames.any(dim=1, keepdim=True)
+    valid_values = valid_frames.expand_as(augmented)
+    value_counts = valid_values.sum(dim=(1, 2), keepdim=True).clamp_min(1)
+    means = (augmented * valid_values).sum(dim=(1, 2), keepdim=True) / value_counts
+    variances = (
+        ((augmented - means) ** 2 * valid_values).sum(
+            dim=(1, 2), keepdim=True
+        )
+        / value_counts
+    )
+    scales = variances.sqrt().clamp_min(1e-6)
+
+    gains = 1 + (
+        2
+        * torch.rand(
+            augmented.shape[0], 1, 1, device=augmented.device
+        )
+        - 1
+    ) * max_gain_change
+    offsets = (
+        2
+        * torch.rand(
+            augmented.shape[0], 1, 1, device=augmented.device
+        )
+        - 1
+    ) * max_offset_std * scales
+    noise = noise_std * scales * torch.randn_like(augmented)
+    perturbed = augmented * gains + offsets + noise
+    return torch.where(apply & valid_frames, perturbed, augmented)
+
+
 def checkpoint_matches_model(model, checkpoint):
     """Check state-dict keys and tensor shapes without modifying the model."""
     if not isinstance(checkpoint, dict):
