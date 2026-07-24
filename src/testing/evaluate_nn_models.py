@@ -10,7 +10,11 @@ from pathlib import Path
 import torch
 from torch.utils.data import DataLoader, random_split
 
-from training.data_utils import MelPopularityDataset, load_popularity_by_id
+from training.data_utils import (
+    MelPopularityDataset,
+    load_popularity_by_id,
+    sync_to_local_scratch,
+)
 from training.train_CNN import PopularityCNN, collate_fn as cnn_collate
 from training.train_CNN_LSTM import (
     PopularityCNNLSTM,
@@ -89,6 +93,15 @@ def parse_args():
         "--checkpoint-dir",
         type=Path,
         default=scratch_root / "checkpoints",
+    )
+    parser.add_argument(
+        "--local-scratch-dir",
+        type=Path,
+        default=None,
+        help=(
+            "If set, sync --mel-dir beneath this node-local directory before "
+            "evaluation, as the training scripts do."
+        ),
     )
     parser.add_argument(
         "--output-dir",
@@ -219,13 +232,21 @@ def main():
     )
     if not args.mel_dir.is_dir():
         raise FileNotFoundError(f"mel directory not found: {args.mel_dir}")
+    mel_dir = args.mel_dir
+    if args.local_scratch_dir is not None:
+        mel_dir = Path(
+            sync_to_local_scratch(
+                str(args.mel_dir),
+                str(args.local_scratch_dir),
+            )
+        )
 
     print(f"evaluating {', '.join(selected)} on {device}", flush=True)
     results = {}
     for model_name in selected:
         config = MODEL_CONFIGS[model_name]
         loader, full_size = make_test_loader(
-            config, args.mel_dir, args.num_workers, device
+            config, mel_dir, args.num_workers, device
         )
         model = config["factory"]().to(device)
         checkpoint_path = args.checkpoint_dir / config["checkpoint"]

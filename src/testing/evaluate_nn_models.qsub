@@ -36,6 +36,7 @@ export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 python -u src/testing/evaluate_nn_models.py \
     --models all \
     --mel-dir "/net/scc1/scratch/$USER/mel_spectrograms" \
+    --local-scratch-dir "/scratch/$USER" \
     --checkpoint-dir "/net/scc1/scratch/$USER/checkpoints" \
     --output-dir "$SGE_O_WORKDIR/results/nn_testing" \
     --num-workers "${NSLOTS:-8}"

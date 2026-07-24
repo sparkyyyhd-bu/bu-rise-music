@@ -20,3 +20,6 @@ PYTHONPATH=src python src/testing/evaluate_nn_models.py \
   --mel-dir /path/to/mel_spectrograms \
   --checkpoint-dir /path/to/checkpoints
 ```
+
+On a compute node, pass `--local-scratch-dir /scratch/$USER` to mirror the
+training scripts' local-data sync. The supplied qsub script does this already.
