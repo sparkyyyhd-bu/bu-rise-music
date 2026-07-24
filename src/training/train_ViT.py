@@ -11,7 +11,7 @@ from torchvision.models import ViT_B_16_Weights, vit_b_16
 from audio_config import MAX_FRAMES, N_MELS
 from training.data_utils import (
     MelPopularityDataset,
-    augment_mels,
+    augment_vit_mels,
     checkpoint_matches_model,
     load_popularity_by_id,
     sync_to_local_scratch,
@@ -34,14 +34,19 @@ class PopularityViT(nn.Module):
         image_size=(N_MELS, MAX_FRAMES),
         patch_size=(16, 16),
         patch_stride=(10, 10),
-        dropout=0.5,
+        dropout=0.7,
+        attention_dropout=0.3,
         weights=ViT_B_16_Weights.IMAGENET1K_SWAG_E2E_V1,
     ):
         super().__init__()
         if patch_size != (16, 16):
             raise ValueError("pretrained ViT-B/16 requires 16x16 patches")
 
-        pretrained_vit = vit_b_16(weights=weights, dropout=dropout)
+        pretrained_vit = vit_b_16(
+            weights=weights,
+            dropout=dropout,
+            attention_dropout=attention_dropout,
+        )
         pretrained_projection = pretrained_vit.conv_proj
         self.patch_embedding = nn.Conv2d(
             1,
@@ -70,9 +75,12 @@ class PopularityViT(nn.Module):
             target_grid_size=self.grid_size,
         )
         self.encoder.pos_embedding = nn.Parameter(adapted_position_embedding)
-        self.head = nn.Linear(pretrained_vit.hidden_dim, 1)
-        nn.init.trunc_normal_(self.head.weight, std=0.02)
-        nn.init.zeros_(self.head.bias)
+        self.head = nn.Sequential(
+            nn.Dropout(dropout),
+            nn.Linear(pretrained_vit.hidden_dim, 1),
+        )
+        nn.init.trunc_normal_(self.head[1].weight, std=0.02)
+        nn.init.zeros_(self.head[1].bias)
 
     @staticmethod
     def _adapt_position_embedding(
@@ -149,7 +157,7 @@ def run_epoch(
             mels = mels.to(device, non_blocking=True)
             targets = targets.to(device, non_blocking=True)
             if is_train:
-                mels = augment_mels(mels)
+                mels = augment_vit_mels(mels)
             with torch.autocast(device_type=device.type, enabled=device.type == "cuda"):
                 predictions = model(mels)
                 loss = criterion(predictions, targets)
@@ -266,15 +274,18 @@ def main():
         "num_heads": 12,
         "num_layers": 12,
         "mlp_dim": 3072,
-        "dropout": 0.5,
+        "dropout": 0.7,
+        "attention_dropout": 0.3,
+        "head_dropout": 0.7,
         "augmentation": {
-            "probability": 0.9,
-            "frequency_masks": 2,
-            "max_frequency_width": 16,
-            "time_masks": 2,
-            "max_time_width": 120,
-            "max_time_shift_fraction": 0.05,
-            "gaussian_noise_std": 0.01,
+            "probability": 1.0,
+            "frequency_masks": 3,
+            "max_frequency_width": 24,
+            "time_masks": 3,
+            "max_time_width": 180,
+            "max_time_shift_fraction": 0.1,
+            "gain_range": [0.85, 1.15],
+            "gaussian_noise_std": 0.02,
         },
         "warmup_epochs": warmup_epochs,
         "fine_tune_encoder": True,
