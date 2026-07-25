@@ -14,7 +14,6 @@ import torch
 from sklearn.base import clone
 from sklearn.ensemble import (
     ExtraTreesRegressor,
-    GradientBoostingRegressor,
     HistGradientBoostingRegressor,
     RandomForestRegressor,
 )
@@ -56,7 +55,6 @@ DEFAULT_MODELS = [
     "ridge",
     "random_forest",
     "extra_trees",
-    "gradient_boosting",
     "hist_gradient_boosting",
     "xgboost",
     "knn",
@@ -191,18 +189,6 @@ def build_models():
                     n_jobs=-1,
                     max_features="sqrt",
                     min_samples_leaf=2,
-                )
-            ),
-            None,
-        ),
-        "gradient_boosting": (
-            tree_pipeline(
-                GradientBoostingRegressor(
-                    n_estimators=300,
-                    learning_rate=0.05,
-                    max_depth=3,
-                    loss="huber",
-                    random_state=RANDOM_SEED,
                 )
             ),
             None,
