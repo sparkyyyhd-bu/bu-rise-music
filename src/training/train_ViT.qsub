@@ -6,7 +6,7 @@
 #$ -pe omp 16
 #$ -l mem_per_core=5G
 #$ -l gpus=1
-#$ -l gpu_c=8.9
+#$ -l gpu_c=8.0
 #$ -l gpu_memory=80G
 
 module load python3/3.10.12
