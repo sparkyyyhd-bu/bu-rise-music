@@ -178,7 +178,7 @@ def tree_pipeline(regressor):
     )
 
 
-def build_models():
+def build_models(xgboost_device):
     return {
         "ridge": (scaled_pipeline(Ridge(alpha=10.0)), None),
         "random_forest": (
@@ -218,6 +218,7 @@ def build_models():
                     objective="reg:squarederror",
                     eval_metric="rmse",
                     tree_method="hist",
+                    device=xgboost_device,
                     n_jobs=-1,
                     random_state=RANDOM_SEED,
                 )
@@ -324,7 +325,13 @@ def main():
     args = parse_args()
     np.random.seed(RANDOM_SEED)
     torch.manual_seed(RANDOM_SEED)
-    available_models = build_models()
+    if not torch.cuda.is_available():
+        raise RuntimeError(
+            "no CUDA GPU is available; submit this script with its GPU qsub file"
+        )
+    gpu_name = torch.cuda.get_device_name(0)
+    print(f"using GPU for XGBoost: {gpu_name}", flush=True)
+    available_models = build_models("cuda")
     unknown_models = sorted(set(args.models) - set(available_models))
     if unknown_models:
         raise ValueError(
