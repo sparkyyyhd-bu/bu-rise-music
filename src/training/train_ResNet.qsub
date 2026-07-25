@@ -12,14 +12,15 @@
 module load python3/3.10.12
 module load cuda/12.2
 
-cd "$SGE_O_WORKDIR"
+PROJECT_STORAGE="${PROJECT_STORAGE:-/project/rise-grid/$USER}"
+REPO_DIR="${REPO_DIR:-$PROJECT_STORAGE/bu-rise-music}"
+cd "$REPO_DIR"
 
-mkdir -p "$SGE_O_WORKDIR/logs"
-exec >>"$SGE_O_WORKDIR/logs/train_ResNet.${JOB_ID}.qlog" \
-     2>>"$SGE_O_WORKDIR/logs/train_ResNet.${JOB_ID}.err"
+mkdir -p "$REPO_DIR/logs"
+exec >>"$REPO_DIR/logs/train_ResNet.${JOB_ID}.qlog" \
+     2>>"$REPO_DIR/logs/train_ResNet.${JOB_ID}.err"
 echo "job ${JOB_ID} started on $(hostname) at $(date)"
 
-PROJECT_STORAGE="${PROJECT_STORAGE:-/project/rise-grid/$USER}"
 VENV_DIR="$PROJECT_STORAGE/venvs/bu-rise-train"
 export PIP_CACHE_DIR="$PROJECT_STORAGE/.cache/pip"
 mkdir -p "$(dirname "$VENV_DIR")" "$PIP_CACHE_DIR"
@@ -30,7 +31,7 @@ source "$VENV_DIR/bin/activate"
 pip install --upgrade pip setuptools
 pip install --upgrade -r requirements.txt
 
-export PYTHONPATH="$SGE_O_WORKDIR/src:$PYTHONPATH"
+export PYTHONPATH="$REPO_DIR/src:$PYTHONPATH"
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 
 WALLTIME_SECONDS=$((12*3600))

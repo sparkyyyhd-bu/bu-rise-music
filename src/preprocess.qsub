@@ -14,13 +14,14 @@ module load python3/3.10.12
 module load cuda/12.2
 module load ffmpeg
 
-cd "$SGE_O_WORKDIR"
+PROJECT_STORAGE="${PROJECT_STORAGE:-/project/rise-grid/$USER}"
+REPO_DIR="${REPO_DIR:-$PROJECT_STORAGE/bu-rise-music}"
+cd "$REPO_DIR"
 
 # Needs modern torch/torchaudio + torchcodec (mp3 decoding via the ffmpeg backend),
 # which the cluster's pytorch module (tops out at 1.13.1) can't provide. Keep the
 # large environment and pip cache on persistent project storage, outside the
 # small home-directory quota.
-PROJECT_STORAGE="${PROJECT_STORAGE:-/project/rise-grid/$USER}"
 VENV_DIR="$PROJECT_STORAGE/venvs/bu-rise-preprocess"
 export PIP_CACHE_DIR="$PROJECT_STORAGE/.cache/pip"
 mkdir -p "$(dirname "$VENV_DIR")" "$PIP_CACHE_DIR"
