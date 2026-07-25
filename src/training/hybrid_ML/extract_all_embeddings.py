@@ -12,6 +12,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader, Dataset
 
 from audio_config import MAX_FRAMES
+from training.data_utils import sync_to_local_scratch
 from training.train_CNN import PopularityCNN
 from training.train_CNN_LSTM import PopularityCNNLSTM
 from training.train_LSTM import PopularityLSTM
@@ -21,7 +22,8 @@ from training.train_ViT import PopularityViT
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 USER = os.environ["USER"]
-MEL_DIR = Path("/net/scc1/scratch") / USER / "mel_spectrograms"
+NETWORK_MEL_DIR = Path("/net/scc1/scratch") / USER / "mel_spectrograms"
+LOCAL_SCRATCH_DIR = Path("/scratch") / USER
 CHECKPOINT_DIR = Path("/net/scc1/scratch") / USER / "checkpoints"
 TRACKS_CSV = (
     REPO_ROOT
@@ -165,9 +167,9 @@ def load_model(model_name, device):
     return model.to(device).eval()
 
 
-def extract_model(model_name, labeled_ids, device):
+def extract_model(model_name, mel_dir, labeled_ids, device):
     config = MODEL_CONFIGS[model_name]
-    dataset = MelTrackDataset(MEL_DIR, labeled_ids, config["normalize"])
+    dataset = MelTrackDataset(mel_dir, labeled_ids, config["normalize"])
     loader = DataLoader(
         dataset,
         batch_size=config["batch_size"],
@@ -249,9 +251,12 @@ def main():
         TRACKS_CSV, usecols=["id", "popularity"]
     ).dropna(subset=["id", "popularity"])
     labeled_ids = set(labeled_tracks["id"].astype(str))
+    mel_dir = sync_to_local_scratch(
+        str(NETWORK_MEL_DIR), str(LOCAL_SCRATCH_DIR)
+    )
     CHECKPOINT_DIR.mkdir(parents=True, exist_ok=True)
     for model_name in selected:
-        extract_model(model_name, labeled_ids, device)
+        extract_model(model_name, mel_dir, labeled_ids, device)
 
 
 if __name__ == "__main__":
