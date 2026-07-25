@@ -1,4 +1,4 @@
-"""Train hybrid regressors using CNN, ResNet, and audio features."""
+"""Compare hybrid regressors using every best-model embedding plus audio features."""
 
 import argparse
 import json
@@ -12,11 +12,7 @@ import numpy as np
 import pandas as pd
 import torch
 from sklearn.base import clone
-from sklearn.ensemble import (
-    ExtraTreesRegressor,
-    HistGradientBoostingRegressor,
-    RandomForestRegressor,
-)
+from sklearn.ensemble import ExtraTreesRegressor, RandomForestRegressor
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import Ridge
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
@@ -32,9 +28,7 @@ from xgboost import XGBRegressor
 REPO_ROOT = Path(__file__).resolve().parents[3]
 USER = os.environ["USER"]
 CHECKPOINT_DIR = Path("/net/scc1/scratch") / USER / "checkpoints"
-CNN_EMBEDDINGS_PATH = CHECKPOINT_DIR / "CNN_embeddings.npz"
-RESNET_EMBEDDINGS_PATH = CHECKPOINT_DIR / "ResNet_embeddings.npz"
-OUTPUT_PATH = CHECKPOINT_DIR / "best_CNN_ResNet_hybrid_model.joblib"
+OUTPUT_PATH = CHECKPOINT_DIR / "best_all_embeddings_hybrid_model.joblib"
 TRACKS_CSV = (
     REPO_ROOT
     / "data"
@@ -49,19 +43,25 @@ LOW_LEVEL_CSV = (
     / "Features Extracted"
     / "low_level_audio_features.csv"
 )
-N_TREES = 500
 RANDOM_SEED = 0
+N_TREES = 500
 DEFAULT_MODELS = [
     "ridge",
     "random_forest",
     "extra_trees",
-    "hist_gradient_boosting",
     "xgboost",
     "knn",
     "linear_svm",
     "rbf_svm",
     "mlp",
 ]
+EMBEDDING_DIMENSIONS = {
+    "CNN": 64,
+    "CNN_LSTM": 128,
+    "LSTM": 512,
+    "ResNet": 512,
+    "ViT": 768,
+}
 SPOTIFY_AUDIO_FEATURES = [
     "acousticness",
     "danceability",
@@ -79,20 +79,51 @@ SPOTIFY_AUDIO_FEATURES = [
 ]
 
 
-def load_embeddings(path, expected_dimensions, label):
+def load_embeddings(model_name, expected_dimensions):
+    path = CHECKPOINT_DIR / f"{model_name}_embeddings.npz"
     with np.load(path, allow_pickle=False) as cache:
         track_ids = cache["track_ids"].astype(str)
         embeddings = cache["embeddings"].astype(np.float32, copy=False)
-    if embeddings.ndim != 2 or embeddings.shape[1] != expected_dimensions:
+    expected = (len(track_ids), expected_dimensions)
+    if embeddings.shape != expected:
         raise ValueError(
-            f"expected {label} embeddings with shape "
-            f"(tracks, {expected_dimensions}), got {embeddings.shape}"
+            f"expected {model_name} embeddings with shape {expected}, "
+            f"got {embeddings.shape}"
         )
-    if len(track_ids) != len(embeddings):
-        raise ValueError("embedding and track ID counts do not match")
     if len(set(track_ids)) != len(track_ids):
-        raise ValueError("embedding cache contains duplicate track IDs")
-    return track_ids, embeddings
+        raise ValueError(f"{model_name} embedding cache contains duplicate IDs")
+    feature_names = [
+        f"{model_name.lower()}_{index:04d}"
+        for index in range(expected_dimensions)
+    ]
+    frame = pd.DataFrame(embeddings, columns=feature_names)
+    frame.insert(0, "id", track_ids)
+    return path, track_ids, frame, feature_names
+
+
+def load_all_embeddings():
+    embedding_frame = None
+    paths = {}
+    groups = {}
+    split_track_ids = None
+    for model_name, dimensions in EMBEDDING_DIMENSIONS.items():
+        path, track_ids, frame, feature_names = load_embeddings(
+            model_name, dimensions
+        )
+        paths[model_name] = str(path)
+        groups[model_name] = feature_names
+        if split_track_ids is None:
+            split_track_ids = track_ids
+        embedding_frame = (
+            frame
+            if embedding_frame is None
+            else embedding_frame.merge(
+                frame, on="id", how="inner", validate="one_to_one"
+            )
+        )
+    if embedding_frame is None or embedding_frame.empty:
+        raise ValueError("embedding caches have no track IDs in common")
+    return split_track_ids, embedding_frame, paths, groups
 
 
 def load_audio_features():
@@ -100,6 +131,7 @@ def load_audio_features():
         TRACKS_CSV,
         usecols=["id", "popularity", *SPOTIFY_AUDIO_FEATURES],
     )
+    tracks["id"] = tracks["id"].astype(str)
     tracks = tracks.dropna(subset=["id", "popularity"]).drop_duplicates("id")
 
     low_level = pd.read_csv(LOW_LEVEL_CSV)
@@ -111,6 +143,7 @@ def load_audio_features():
         ],
         errors="ignore",
     ).rename(columns={"track_id": "id"})
+    low_level["id"] = low_level["id"].astype(str)
     low_level = low_level.drop_duplicates("id")
     low_level_names = [
         column
@@ -124,21 +157,6 @@ def load_audio_features():
         validate="one_to_one",
     )
     return tracks, [*SPOTIFY_AUDIO_FEATURES, *low_level_names]
-
-
-def evaluate(model, x, y, label):
-    predictions = np.clip(model.predict(x), 0.0, 100.0)
-    metrics = {
-        "mae": float(mean_absolute_error(y, predictions)),
-        "rmse": float(mean_squared_error(y, predictions) ** 0.5),
-        "r2": float(r2_score(y, predictions)),
-    }
-    print(
-        f"{label}: MAE {metrics['mae']:.3f} | "
-        f"RMSE {metrics['rmse']:.3f} | R2 {metrics['r2']:.3f}",
-        flush=True,
-    )
-    return metrics
 
 
 def scaled_pipeline(regressor):
@@ -161,12 +179,6 @@ def tree_pipeline(regressor):
 
 
 def build_models():
-    """Return common regressors and optional training-set caps.
-
-    Exact RBF SVM and KNN do not scale gracefully to 100k high-dimensional
-    samples, so their fits are deterministically capped while evaluation still
-    uses the complete validation set.
-    """
     return {
         "ridge": (scaled_pipeline(Ridge(alpha=10.0)), None),
         "random_forest": (
@@ -189,18 +201,6 @@ def build_models():
                     n_jobs=-1,
                     max_features="sqrt",
                     min_samples_leaf=2,
-                )
-            ),
-            None,
-        ),
-        "hist_gradient_boosting": (
-            tree_pipeline(
-                HistGradientBoostingRegressor(
-                    max_iter=300,
-                    learning_rate=0.08,
-                    max_leaf_nodes=31,
-                    l2_regularization=1.0,
-                    random_state=RANDOM_SEED,
                 )
             ),
             None,
@@ -263,19 +263,59 @@ def build_models():
     }
 
 
+def evaluate(model, x, y, label):
+    predictions = np.clip(model.predict(x), 0.0, 100.0)
+    metrics = {
+        "mae": float(mean_absolute_error(y, predictions)),
+        "rmse": float(mean_squared_error(y, predictions) ** 0.5),
+        "r2": float(r2_score(y, predictions)),
+    }
+    print(
+        f"{label}: MAE {metrics['mae']:.3f} | "
+        f"RMSE {metrics['rmse']:.3f} | R2 {metrics['r2']:.3f}",
+        flush=True,
+    )
+    return metrics
+
+
+def grouped_feature_importance(model, feature_names, embedding_groups):
+    raw = model.named_steps["regressor"].feature_importances_.astype(float)
+    if len(raw) != len(feature_names):
+        raise ValueError("XGBoost feature importance count does not match inputs")
+    importance_by_feature = dict(zip(feature_names, raw))
+    embedding_columns = {
+        column for columns in embedding_groups.values() for column in columns
+    }
+    grouped = {
+        model_name: float(sum(importance_by_feature[name] for name in names))
+        for model_name, names in embedding_groups.items()
+    }
+    grouped.update(
+        {
+            name: float(importance_by_feature[name])
+            for name in feature_names
+            if name not in embedding_columns
+        }
+    )
+    total = sum(grouped.values())
+    if total:
+        grouped = {name: value / total for name, value in grouped.items()}
+    return dict(sorted(grouped.items(), key=lambda item: item[1], reverse=True))
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--models",
         nargs="+",
         default=DEFAULT_MODELS,
-        help="model names to run (default: all)",
+        help=f"models to compare (default: {', '.join(DEFAULT_MODELS)})",
     )
     parser.add_argument(
         "--output",
         type=Path,
         default=OUTPUT_PATH,
-        help=f"best-model artifact path (default: {OUTPUT_PATH})",
+        help=f"model artifact path (default: {OUTPUT_PATH})",
     )
     return parser.parse_args()
 
@@ -291,147 +331,140 @@ def main():
             f"unknown models: {', '.join(unknown_models)}; choices are "
             f"{', '.join(available_models)}"
         )
-    track_ids, cnn_embeddings = load_embeddings(
-        CNN_EMBEDDINGS_PATH, 64, "CNN"
-    )
-    resnet_track_ids, resnet_embeddings = load_embeddings(
-        RESNET_EMBEDDINGS_PATH, 512, "ResNet"
-    )
 
-    val_size = max(1, int(0.15 * len(track_ids)))
-    test_size = max(1, int(0.15 * len(track_ids)))
-    train_size = len(track_ids) - val_size - test_size
-    if train_size < 1:
-        raise ValueError("at least three cached embeddings are required")
-
-    # The cache preserves MelPopularityDataset's scan order. Reusing seed 0
-    # therefore reconstructs the split from train_CNN.py.
-    train_subset, val_subset, _ = random_split(
-        range(len(track_ids)),
-        [train_size, val_size, test_size],
-        generator=torch.Generator().manual_seed(0),
+    split_track_ids, embeddings, embedding_paths, embedding_groups = (
+        load_all_embeddings()
     )
-    train_indices = np.asarray(train_subset.indices)
-    val_indices = np.asarray(val_subset.indices)
-
-    cnn_feature_names = [f"cnn_{index:02d}" for index in range(64)]
-    resnet_feature_names = [
-        f"resnet_{index:03d}" for index in range(512)
-    ]
-    cnn_frame = pd.DataFrame(cnn_embeddings, columns=cnn_feature_names)
-    cnn_frame.insert(0, "id", track_ids)
-    resnet_frame = pd.DataFrame(
-        resnet_embeddings, columns=resnet_feature_names
-    )
-    resnet_frame.insert(0, "id", resnet_track_ids)
-    embedding_frame = cnn_frame.merge(
-        resnet_frame, on="id", how="inner", validate="one_to_one"
-    )
-    if embedding_frame.empty:
-        raise ValueError("CNN and ResNet embedding caches have no IDs in common")
     tabular, audio_feature_names = load_audio_features()
-    combined = embedding_frame.merge(
+    combined = embeddings.merge(
         tabular, on="id", how="inner", validate="one_to_one"
     ).set_index("id")
 
-    train_ids = set(track_ids[train_indices])
-    val_ids = set(track_ids[val_indices])
+    val_size = max(1, int(0.15 * len(split_track_ids)))
+    test_size = max(1, int(0.15 * len(split_track_ids)))
+    train_size = len(split_track_ids) - val_size - test_size
+    if train_size < 1:
+        raise ValueError("at least three cached embeddings are required")
+    train_subset, val_subset, _ = random_split(
+        range(len(split_track_ids)),
+        [train_size, val_size, test_size],
+        generator=torch.Generator().manual_seed(0),
+    )
+    train_ids = set(split_track_ids[np.asarray(train_subset.indices)])
+    validation_ids = set(split_track_ids[np.asarray(val_subset.indices)])
     train = combined.loc[combined.index.isin(train_ids)]
-    validation = combined.loc[combined.index.isin(val_ids)]
+    validation = combined.loc[combined.index.isin(validation_ids)]
     if train.empty or validation.empty:
         raise ValueError("no cached IDs overlap the tabular audio features")
 
     feature_names = [
-        *cnn_feature_names,
-        *resnet_feature_names,
+        *(
+            name
+            for model_name in EMBEDDING_DIMENSIONS
+            for name in embedding_groups[model_name]
+        ),
         *audio_feature_names,
     ]
-    print(
-        f"matched {len(train)} training and {len(validation)} validation tracks; "
-        f"using {len(feature_names)} features",
-        flush=True,
-    )
     x_train = train[feature_names]
     y_train = train["popularity"]
     x_validation = validation[feature_names]
     y_validation = validation["popularity"]
+    print(
+        f"matched {len(train)} training and {len(validation)} validation tracks; "
+        f"using {len(feature_names)} features from {len(embedding_groups)} "
+        "embeddings and audio metadata",
+        flush=True,
+    )
     rng = np.random.default_rng(RANDOM_SEED)
     results = {}
-    best_name = None
-    best_model = None
-
+    fitted_models = {}
     for name in args.models:
         estimator, sample_cap = available_models[name]
         model = clone(estimator)
         if sample_cap is not None and len(x_train) > sample_cap:
-            fit_positions = np.sort(
+            positions = np.sort(
                 rng.choice(len(x_train), size=sample_cap, replace=False)
             )
-            fit_x = x_train.iloc[fit_positions]
-            fit_y = y_train.iloc[fit_positions]
+            fit_x = x_train.iloc[positions]
+            fit_y = y_train.iloc[positions]
         else:
             fit_x, fit_y = x_train, y_train
-
-        print(
-            f"\ntraining {name} on {len(fit_x)} samples...",
-            flush=True,
-        )
+        print(f"\ntraining {name} on {len(fit_x)} samples...", flush=True)
         start = time.perf_counter()
         model.fit(fit_x, fit_y)
-        fit_seconds = time.perf_counter() - start
-        train_metrics = evaluate(model, fit_x, fit_y, f"{name} train")
-        validation_metrics = evaluate(
-            model, x_validation, y_validation, f"{name} validation"
-        )
         results[name] = {
             "fit_samples": len(fit_x),
-            "fit_seconds": fit_seconds,
-            "train": train_metrics,
-            "validation": validation_metrics,
+            "fit_seconds": time.perf_counter() - start,
+            "train": evaluate(model, fit_x, fit_y, f"{name} train"),
+            "validation": evaluate(
+                model, x_validation, y_validation, f"{name} validation"
+            ),
         }
-        if (
-            best_name is None
-            or validation_metrics["rmse"]
-            < results[best_name]["validation"]["rmse"]
-        ):
-            best_name, best_model = name, model
+        fitted_models[name] = model
 
+    leaderboard = sorted(
+        results, key=lambda name: results[name]["validation"]["rmse"]
+    )
+    best_name = leaderboard[0]
+    best_model = fitted_models[best_name]
     print("\nValidation leaderboard (lower RMSE is better):", flush=True)
-    for rank, (name, result) in enumerate(
-        sorted(results.items(), key=lambda item: item[1]["validation"]["rmse"]),
-        start=1,
-    ):
-        metrics = result["validation"]
+    for rank, name in enumerate(leaderboard, start=1):
+        metrics = results[name]["validation"]
         print(
             f"{rank:2d}. {name:24s} RMSE {metrics['rmse']:.3f} | "
             f"MAE {metrics['mae']:.3f} | R2 {metrics['r2']:.3f}",
             flush=True,
         )
 
+    if "xgboost" not in fitted_models:
+        raise ValueError(
+            "xgboost must be included in --models to calculate feature importance"
+        )
+    importances = grouped_feature_importance(
+        fitted_models["xgboost"], feature_names, embedding_groups
+    )
+
+    print("\nGrouped XGBoost feature importance:", flush=True)
+    for rank, (name, importance) in enumerate(importances.items(), start=1):
+        print(f"{rank:3d}. {name:32s} {importance:.6f}", flush=True)
+
     artifact = {
         "model": best_model,
         "model_name": best_name,
         "feature_names": feature_names,
-        "cnn_feature_names": cnn_feature_names,
-        "resnet_feature_names": resnet_feature_names,
+        "embedding_feature_names": embedding_groups,
         "audio_feature_names": audio_feature_names,
-        "cnn_embeddings_path": str(CNN_EMBEDDINGS_PATH),
-        "resnet_embeddings_path": str(RESNET_EMBEDDINGS_PATH),
+        "embedding_paths": embedding_paths,
+        "grouped_feature_importance": importances,
         "split_seed": 0,
         "random_seed": RANDOM_SEED,
         "results": results,
+        "feature_importance_model": "xgboost",
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     joblib.dump(artifact, args.output)
     metrics_path = args.output.with_suffix(".metrics.json")
     metrics_path.write_text(
-        json.dumps({"best_model": best_name, "models": results}, indent=2)
+        json.dumps(
+            {
+                "best_model": best_name,
+                "models": results,
+                "feature_importance_model": "xgboost",
+                "grouped_feature_importance": importances,
+            },
+            indent=2,
+        )
         + "\n",
         encoding="utf-8",
     )
+    importance_path = args.output.with_suffix(".feature_importance.csv")
+    pd.DataFrame(
+        importances.items(), columns=["feature", "importance"]
+    ).to_csv(importance_path, index=False)
     print(f"\nbest model: {best_name}", flush=True)
     print(f"saved model to {args.output}", flush=True)
     print(f"saved metrics to {metrics_path}", flush=True)
+    print(f"saved grouped feature importance to {importance_path}", flush=True)
 
 
 if __name__ == "__main__":

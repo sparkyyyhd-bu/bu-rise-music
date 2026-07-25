@@ -1,18 +1,22 @@
 #!/bin/bash -l
 
 #$ -P rise-grid
-#$ -N train_CNN_ResNet_hybrid
-#$ -l h_rt=04:00:00
+#$ -N extract_all_embeddings
+#$ -l h_rt=24:00:00
 #$ -pe omp 16
 #$ -l mem_per_core=5G
+#$ -l gpus=1
+#$ -l gpu_c=8.0
+#$ -l gpu_memory=40G
 
 module load python3/3.10.12
+module load cuda/12.2
 
 cd "$SGE_O_WORKDIR"
 
 mkdir -p "$SGE_O_WORKDIR/logs"
-exec >>"$SGE_O_WORKDIR/logs/train_CNN_ResNet_hybrid.${JOB_ID}.qlog" \
-     2>>"$SGE_O_WORKDIR/logs/train_CNN_ResNet_hybrid.${JOB_ID}.err"
+exec >>"$SGE_O_WORKDIR/logs/extract_all_embeddings.${JOB_ID}.qlog" \
+     2>>"$SGE_O_WORKDIR/logs/extract_all_embeddings.${JOB_ID}.err"
 echo "job ${JOB_ID} started on $(hostname) at $(date)"
 
 PROJECT_STORAGE="${PROJECT_STORAGE:-/project/rise-grid/$USER}"
@@ -27,5 +31,6 @@ pip install --upgrade pip setuptools
 pip install --upgrade -r requirements.txt
 
 export PYTHONPATH="$SGE_O_WORKDIR/src:$PYTHONPATH"
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 
-python -u src/training/hybrid_ML/train_CNN_ResNet_hybrid.py
+python -u src/training/hybrid_ML/extract_all_embeddings.py --models all
