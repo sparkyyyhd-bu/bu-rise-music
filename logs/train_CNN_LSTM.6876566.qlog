@@ -1,4 +1,4 @@
-job 6848856 started on scc-507 at Thu Jul 23 00:01:13 EDT 2026
+job 6876566 started on scc-507 at Fri Jul 24 15:55:51 EDT 2026
 Requirement already satisfied: pip in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (26.1.2)
 Requirement already satisfied: setuptools in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (83.0.0)
 Requirement already satisfied: pandas in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from -r requirements.txt (line 1)) (2.3.3)
@@ -9,7 +9,10 @@ Requirement already satisfied: torch in /project/rise-grid/lucaslu/venvs/bu-rise
 Requirement already satisfied: torchvision in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from -r requirements.txt (line 6)) (0.28.0)
 Requirement already satisfied: torchaudio in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from -r requirements.txt (line 7)) (2.11.0)
 Requirement already satisfied: torchmetrics in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from -r requirements.txt (line 8)) (1.9.0)
-Requirement already satisfied: tqdm in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from -r requirements.txt (line 9)) (4.69.0)
+Requirement already satisfied: tqdm in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from -r requirements.txt (line 9)) (4.69.1)
+Requirement already satisfied: scikit-learn in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from -r requirements.txt (line 10)) (1.7.2)
+Requirement already satisfied: joblib in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from -r requirements.txt (line 11)) (1.5.3)
+Requirement already satisfied: xgboost in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from -r requirements.txt (line 12)) (3.2.0)
 Requirement already satisfied: numpy>=1.22.4 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from pandas->-r requirements.txt (line 1)) (2.2.6)
 Requirement already satisfied: python-dateutil>=2.8.2 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from pandas->-r requirements.txt (line 1)) (2.9.0.post0)
 Requirement already satisfied: pytz>=2020.1 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from pandas->-r requirements.txt (line 1)) (2026.2)
@@ -46,20 +49,23 @@ Requirement already satisfied: nvidia-cusparselt-cu13==0.8.1 in /project/rise-gr
 Requirement already satisfied: nvidia-nccl-cu13==2.29.7 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from torch->-r requirements.txt (line 5)) (2.29.7)
 Requirement already satisfied: nvidia-nvshmem-cu13==3.4.5 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from torch->-r requirements.txt (line 5)) (3.4.5)
 Requirement already satisfied: triton==3.7.1 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from torch->-r requirements.txt (line 5)) (3.7.1)
-Requirement already satisfied: nvidia-cuda-runtime==13.0.96.* in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (13.0.96)
-Requirement already satisfied: nvidia-curand==10.4.0.35.* in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (10.4.0.35)
 Requirement already satisfied: nvidia-cuda-nvrtc==13.0.88.* in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (13.0.88)
 Requirement already satisfied: nvidia-cublas==13.1.1.3.* in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (13.1.1.3)
-Requirement already satisfied: nvidia-cusolver==12.0.4.66.* in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (12.0.4.66)
+Requirement already satisfied: nvidia-curand==10.4.0.35.* in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (10.4.0.35)
 Requirement already satisfied: nvidia-cusparse==12.6.3.3.* in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (12.6.3.3)
 Requirement already satisfied: nvidia-nvjitlink<14,>=13.0.88 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (13.3.33)
+Requirement already satisfied: nvidia-cuda-runtime==13.0.96.* in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (13.0.96)
 Requirement already satisfied: nvidia-cufile==1.15.1.6.* in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (1.15.1.6)
+Requirement already satisfied: nvidia-cusolver==12.0.4.66.* in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (12.0.4.66)
 Requirement already satisfied: nvidia-nvtx==13.0.85.* in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (13.0.85)
 Requirement already satisfied: nvidia-cuda-cupti==13.0.85.* in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (13.0.85)
 Requirement already satisfied: nvidia-cufft==12.0.0.61.* in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (12.0.0.61)
 Requirement already satisfied: cuda-pathfinder>=1.4.2 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-bindings<14,>=13.0.3->torch->-r requirements.txt (line 5)) (1.5.6)
 Requirement already satisfied: pillow!=8.3.*,>=5.3.0 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from torchvision->-r requirements.txt (line 6)) (12.3.0)
 Requirement already satisfied: lightning-utilities>=0.15.3 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from torchmetrics->-r requirements.txt (line 8)) (0.15.3)
+Requirement already satisfied: scipy>=1.8.0 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from scikit-learn->-r requirements.txt (line 10)) (1.15.3)
+Requirement already satisfied: threadpoolctl>=3.1.0 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from scikit-learn->-r requirements.txt (line 10)) (3.6.0)
+Requirement already satisfied: nvidia-nccl-cu12 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from xgboost->-r requirements.txt (line 12)) (2.30.7)
 Requirement already satisfied: parso<0.9.0,>=0.8.6 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from jedi>=0.16->ipython->-r requirements.txt (line 4)) (0.8.7)
 Requirement already satisfied: ptyprocess>=0.5 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from pexpect>4.3->ipython->-r requirements.txt (line 4)) (0.7.0)
 Requirement already satisfied: six>=1.5 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from python-dateutil>=2.8.2->pandas->-r requirements.txt (line 1)) (1.17.0)
@@ -68,30 +74,65 @@ Requirement already satisfied: MarkupSafe>=2.0 in /project/rise-grid/lucaslu/ven
 Requirement already satisfied: executing>=1.2.0 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from stack_data->ipython->-r requirements.txt (line 4)) (2.2.1)
 Requirement already satisfied: asttokens>=2.1.0 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from stack_data->ipython->-r requirements.txt (line 4)) (3.0.2)
 Requirement already satisfied: pure-eval in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from stack_data->ipython->-r requirements.txt (line 4)) (0.2.3)
-checkpoint at /net/scc1/scratch/lucaslu/checkpoints/last_transformer_checkpoint.pt doesn't match the current model architecture (missing keys: encoder.norm.bias, encoder.norm.weight, patch_embedding.bias, patch_embedding.weight | unexpected keys: encoder.layers.4.linear1.bias, encoder.layers.4.linear1.weight, encoder.layers.4.linear2.bias, encoder.layers.4.linear2.weight, encoder.layers.4.norm1.bias, encoder.layers.4.norm1.weight, encoder.layers.4.norm2.bias, encoder.layers.4.norm2.weight, encoder.layers.4.self_attn.in_proj_bias, encoder.layers.4.self_attn.in_proj_weight, encoder.layers.4.self_attn.out_proj.bias, encoder.layers.4.self_attn.out_proj.weight, encoder.layers.5.linear1.bias, encoder.layers.5.linear1.weight, encoder.layers.5.linear2.bias, encoder.layers.5.linear2.weight, encoder.layers.5.norm1.bias, encoder.layers.5.norm1.weight, encoder.layers.5.norm2.bias, encoder.layers.5.norm2.weight, encoder.layers.5.self_attn.in_proj_bias, encoder.layers.5.self_attn.in_proj_weight, encoder.layers.5.self_attn.out_proj.bias, encoder.layers.5.self_attn.out_proj.weight, encoder.layers.6.linear1.bias, encoder.layers.6.linear1.weight, encoder.layers.6.linear2.bias, encoder.layers.6.linear2.weight, encoder.layers.6.norm1.bias, encoder.layers.6.norm1.weight, encoder.layers.6.norm2.bias, encoder.layers.6.norm2.weight, encoder.layers.6.self_attn.in_proj_bias, encoder.layers.6.self_attn.in_proj_weight, encoder.layers.6.self_attn.out_proj.bias, encoder.layers.6.self_attn.out_proj.weight, encoder.layers.7.linear1.bias, encoder.layers.7.linear1.weight, encoder.layers.7.linear2.bias, encoder.layers.7.linear2.weight, encoder.layers.7.norm1.bias, encoder.layers.7.norm1.weight, encoder.layers.7.norm2.bias, encoder.layers.7.norm2.weight, encoder.layers.7.self_attn.in_proj_bias, encoder.layers.7.self_attn.in_proj_weight, encoder.layers.7.self_attn.out_proj.bias, encoder.layers.7.self_attn.out_proj.weight, input_proj.bias, input_proj.weight | shape mismatches: encoder.layers.0.linear1.bias: checkpoint (5120,), model (1024,); encoder.layers.0.linear1.weight: checkpoint (5120, 1280), model (1024, 256); encoder.layers.0.linear2.bias: checkpoint (1280,), model (256,); encoder.layers.0.linear2.weight: checkpoint (1280, 5120), model (256, 1024); encoder.layers.0.norm1.bias: checkpoint (1280,), model (256,); encoder.layers.0.norm1.weight: checkpoint (1280,), model (256,); encoder.layers.0.norm2.bias: checkpoint (1280,), model (256,); encoder.layers.0.norm2.weight: checkpoint (1280,), model (256,); encoder.layers.0.self_attn.in_proj_bias: checkpoint (3840,), model (768,); encoder.layers.0.self_attn.in_proj_weight: checkpoint (3840, 1280), model (768, 256); encoder.layers.0.self_attn.out_proj.bias: checkpoint (1280,), model (256,); encoder.layers.0.self_attn.out_proj.weight: checkpoint (1280, 1280), model (256, 256); encoder.layers.1.linear1.bias: checkpoint (5120,), model (1024,); encoder.layers.1.linear1.weight: checkpoint (5120, 1280), model (1024, 256); encoder.layers.1.linear2.bias: checkpoint (1280,), model (256,); encoder.layers.1.linear2.weight: checkpoint (1280, 5120), model (256, 1024); encoder.layers.1.norm1.bias: checkpoint (1280,), model (256,); encoder.layers.1.norm1.weight: checkpoint (1280,), model (256,); encoder.layers.1.norm2.bias: checkpoint (1280,), model (256,); encoder.layers.1.norm2.weight: checkpoint (1280,), model (256,); encoder.layers.1.self_attn.in_proj_bias: checkpoint (3840,), model (768,); encoder.layers.1.self_attn.in_proj_weight: checkpoint (3840, 1280), model (768, 256); encoder.layers.1.self_attn.out_proj.bias: checkpoint (1280,), model (256,); encoder.layers.1.self_attn.out_proj.weight: checkpoint (1280, 1280), model (256, 256); encoder.layers.2.linear1.bias: checkpoint (5120,), model (1024,); encoder.layers.2.linear1.weight: checkpoint (5120, 1280), model (1024, 256); encoder.layers.2.linear2.bias: checkpoint (1280,), model (256,); encoder.layers.2.linear2.weight: checkpoint (1280, 5120), model (256, 1024); encoder.layers.2.norm1.bias: checkpoint (1280,), model (256,); encoder.layers.2.norm1.weight: checkpoint (1280,), model (256,); encoder.layers.2.norm2.bias: checkpoint (1280,), model (256,); encoder.layers.2.norm2.weight: checkpoint (1280,), model (256,); encoder.layers.2.self_attn.in_proj_bias: checkpoint (3840,), model (768,); encoder.layers.2.self_attn.in_proj_weight: checkpoint (3840, 1280), model (768, 256); encoder.layers.2.self_attn.out_proj.bias: checkpoint (1280,), model (256,); encoder.layers.2.self_attn.out_proj.weight: checkpoint (1280, 1280), model (256, 256); encoder.layers.3.linear1.bias: checkpoint (5120,), model (1024,); encoder.layers.3.linear1.weight: checkpoint (5120, 1280), model (1024, 256); encoder.layers.3.linear2.bias: checkpoint (1280,), model (256,); encoder.layers.3.linear2.weight: checkpoint (1280, 5120), model (256, 1024); encoder.layers.3.norm1.bias: checkpoint (1280,), model (256,); encoder.layers.3.norm1.weight: checkpoint (1280,), model (256,); encoder.layers.3.norm2.bias: checkpoint (1280,), model (256,); encoder.layers.3.norm2.weight: checkpoint (1280,), model (256,); encoder.layers.3.self_attn.in_proj_bias: checkpoint (3840,), model (768,); encoder.layers.3.self_attn.in_proj_weight: checkpoint (3840, 1280), model (768, 256); encoder.layers.3.self_attn.out_proj.bias: checkpoint (1280,), model (256,); encoder.layers.3.self_attn.out_proj.weight: checkpoint (1280, 1280), model (256, 256); fc.weight: checkpoint (1, 1280), model (1, 256); position_embedding: checkpoint (1, 2584, 1280), model (1, 322, 256)); starting fresh with the new architecture
-epoch 001 | train loss 0.0317 mae 13.76 r2 -0.128 pred 38.9±10.9 | val loss 0.0234 mae 12.34 r2 0.181 pred 41.6±6.3
-epoch 002 | train loss 0.0244 mae 12.58 r2 0.132 pred 39.8±8.5 | val loss 0.0228 mae 12.14 r2 0.201 pred 38.4±7.5
-epoch 003 | train loss 0.0235 mae 12.32 r2 0.165 pred 39.8±8.4 | val loss 0.0243 mae 12.46 r2 0.150 pred 44.5±7.9
-epoch 004 | train loss 0.0226 mae 12.06 r2 0.197 pred 39.8±8.4 | val loss 0.0221 mae 11.91 r2 0.227 pred 38.1±8.2
-epoch 005 | train loss 0.0220 mae 11.88 r2 0.218 pred 39.8±8.5 | val loss 0.0228 mae 12.06 r2 0.203 pred 42.9±8.6
-epoch 006 | train loss 0.0226 mae 12.07 r2 0.197 pred 39.8±8.2 | val loss 0.0240 mae 12.53 r2 0.159 pred 41.6±5.3
-epoch 007 | train loss 0.0231 mae 12.24 r2 0.178 pred 39.8±7.7 | val loss 0.0223 mae 12.00 r2 0.219 pred 40.1±7.2
-epoch 008 | train loss 0.0224 mae 12.00 r2 0.205 pred 39.8±8.2 | val loss 0.0227 mae 12.05 r2 0.207 pred 39.0±9.7
-epoch 009 | train loss 0.0219 mae 11.86 r2 0.222 pred 39.8±8.4 | val loss 0.0219 mae 11.81 r2 0.232 pred 40.3±9.5
-epoch 010 | train loss 0.0216 mae 11.75 r2 0.233 pred 39.8±8.6 | val loss 0.0236 mae 12.40 r2 0.172 pred 42.1±7.7
-epoch 011 | train loss 0.0219 mae 11.87 r2 0.221 pred 39.8±8.3 | val loss 0.0224 mae 12.01 r2 0.217 pred 40.3±7.8
-epoch 012 | train loss 0.0219 mae 11.87 r2 0.223 pred 39.8±8.3 | val loss 0.0224 mae 11.97 r2 0.216 pred 37.5±8.1
-epoch 013 | train loss 0.0213 mae 11.70 r2 0.242 pred 39.8±8.5 | val loss 0.0216 mae 11.72 r2 0.244 pred 38.7±8.9
-epoch 014 | train loss 0.0209 mae 11.56 r2 0.256 pred 39.8±8.7 | val loss 0.0213 mae 11.63 r2 0.256 pred 40.0±8.5
-epoch 015 | train loss 0.0206 mae 11.47 r2 0.267 pred 39.8±8.9 | val loss 0.0216 mae 11.72 r2 0.243 pred 37.9±8.9
-epoch 016 | train loss 0.0203 mae 11.38 r2 0.279 pred 39.8±9.1 | val loss 0.0211 mae 11.54 r2 0.262 pred 39.8±8.9
-epoch 017 | train loss 0.0199 mae 11.25 r2 0.292 pred 39.7±9.2 | val loss 0.0249 mae 12.54 r2 0.127 pred 45.9±9.5
-epoch 018 | train loss 0.0197 mae 11.19 r2 0.301 pred 39.8±9.4 | val loss 0.0213 mae 11.62 r2 0.255 pred 39.1±9.0
-epoch 019 | train loss 0.0193 mae 11.06 r2 0.315 pred 39.8±9.6 | val loss 0.0213 mae 11.61 r2 0.253 pred 40.8±9.6
-epoch 020 | train loss 0.0190 mae 10.98 r2 0.325 pred 39.8±9.7 | val loss 0.0218 mae 11.70 r2 0.238 pred 40.8±9.8
-epoch 021 | train loss 0.0185 mae 10.83 r2 0.341 pred 39.8±9.9 | val loss 0.0214 mae 11.64 r2 0.249 pred 39.6±9.6
-epoch 022 | train loss 0.0182 mae 10.73 r2 0.353 pred 39.8±10.1 | val loss 0.0220 mae 11.76 r2 0.228 pred 39.3±10.8
-epoch 023 | train loss 0.0171 mae 10.38 r2 0.394 pred 39.8±10.6 | val loss 0.0224 mae 11.79 r2 0.217 pred 41.5±11.3
-epoch 024 | train loss 0.0166 mae 10.21 r2 0.412 pred 39.8±10.8 | val loss 0.0221 mae 11.75 r2 0.225 pred 40.3±11.0
-early stopping after 8 epochs without validation improvement
-finished epoch 24; best val loss 0.0211; latest checkpoint saved to /net/scc1/scratch/lucaslu/checkpoints/last_transformer_checkpoint.pt
+loaded 101934 labeled mel spectrograms
+epoch 001 | train loss 0.0622 mae 19.29 r2 -1.212 pred 31.2±17.3 | val loss 0.0239 mae 12.51 r2 0.162 pred 39.2±6.4
+epoch 002 | train loss 0.0282 mae 13.51 r2 -0.004 pred 39.0±9.2 | val loss 0.0265 mae 13.08 r2 0.072 pred 45.3±6.3
+epoch 003 | train loss 0.0272 mae 13.23 r2 0.035 pred 39.0±9.3 | val loss 0.0228 mae 12.12 r2 0.202 pred 40.5±7.6
+epoch 004 | train loss 0.0264 mae 13.00 r2 0.062 pred 39.0±9.4 | val loss 0.0227 mae 12.09 r2 0.204 pred 37.7±7.7
+epoch 005 | train loss 0.0254 mae 12.76 r2 0.096 pred 39.1±9.4 | val loss 0.0222 mae 11.96 r2 0.222 pred 38.1±7.6
+epoch 006 | train loss 0.0248 mae 12.61 r2 0.118 pred 39.2±9.3 | val loss 0.0217 mae 11.78 r2 0.241 pred 39.0±8.4
+epoch 007 | train loss 0.0243 mae 12.45 r2 0.138 pred 39.2±9.2 | val loss 0.0217 mae 11.80 r2 0.240 pred 38.1±7.7
+epoch 008 | train loss 0.0238 mae 12.35 r2 0.153 pred 39.3±9.1 | val loss 0.0217 mae 11.78 r2 0.241 pred 41.4±8.4
+epoch 009 | train loss 0.0236 mae 12.28 r2 0.162 pred 39.3±9.0 | val loss 0.0215 mae 11.73 r2 0.246 pred 38.7±8.6
+epoch 010 | train loss 0.0232 mae 12.17 r2 0.176 pred 39.3±8.9 | val loss 0.0222 mae 11.94 r2 0.221 pred 36.7±8.4
+epoch 011 | train loss 0.0228 mae 12.07 r2 0.190 pred 39.4±8.9 | val loss 0.0210 mae 11.56 r2 0.265 pred 39.5±8.8
+epoch 012 | train loss 0.0224 mae 11.97 r2 0.203 pred 39.4±8.9 | val loss 0.0209 mae 11.53 r2 0.270 pred 39.8±8.7
+epoch 013 | train loss 0.0223 mae 11.92 r2 0.209 pred 39.4±8.8 | val loss 0.0210 mae 11.58 r2 0.264 pred 38.7±8.6
+epoch 014 | train loss 0.0220 mae 11.86 r2 0.218 pred 39.5±8.8 | val loss 0.0209 mae 11.52 r2 0.269 pred 40.0±8.6
+epoch 015 | train loss 0.0219 mae 11.82 r2 0.223 pred 39.5±8.8 | val loss 0.0207 mae 11.48 r2 0.276 pred 39.5±8.7
+epoch 016 | train loss 0.0217 mae 11.76 r2 0.230 pred 39.5±8.8 | val loss 0.0213 mae 11.60 r2 0.256 pred 42.1±9.1
+epoch 017 | train loss 0.0216 mae 11.75 r2 0.233 pred 39.5±8.7 | val loss 0.0210 mae 11.55 r2 0.265 pred 38.7±8.9
+epoch 018 | train loss 0.0214 mae 11.69 r2 0.240 pred 39.5±8.8 | val loss 0.0217 mae 11.68 r2 0.242 pred 43.0±9.1
+epoch 019 | train loss 0.0212 mae 11.65 r2 0.245 pred 39.6±8.8 | val loss 0.0206 mae 11.46 r2 0.277 pred 41.0±8.4
+epoch 020 | train loss 0.0211 mae 11.62 r2 0.249 pred 39.6±8.8 | val loss 0.0204 mae 11.41 r2 0.286 pred 39.4±8.4
+epoch 021 | train loss 0.0209 mae 11.56 r2 0.256 pred 39.6±8.8 | val loss 0.0204 mae 11.40 r2 0.286 pred 39.2±8.3
+epoch 022 | train loss 0.0210 mae 11.57 r2 0.254 pred 39.6±8.8 | val loss 0.0204 mae 11.36 r2 0.286 pred 40.4±9.3
+epoch 023 | train loss 0.0208 mae 11.52 r2 0.261 pred 39.7±8.8 | val loss 0.0204 mae 11.37 r2 0.287 pred 39.6±9.2
+epoch 024 | train loss 0.0207 mae 11.51 r2 0.263 pred 39.7±8.8 | val loss 0.0203 mae 11.35 r2 0.288 pred 40.8±9.4
+epoch 025 | train loss 0.0207 mae 11.49 r2 0.266 pred 39.7±8.9 | val loss 0.0209 mae 11.45 r2 0.270 pred 42.2±10.2
+epoch 026 | train loss 0.0207 mae 11.48 r2 0.266 pred 39.7±8.9 | val loss 0.0206 mae 11.47 r2 0.278 pred 41.6±8.7
+epoch 027 | train loss 0.0206 mae 11.46 r2 0.269 pred 39.7±8.8 | val loss 0.0202 mae 11.32 r2 0.294 pred 39.3±9.0
+epoch 028 | train loss 0.0205 mae 11.43 r2 0.272 pred 39.7±8.9 | val loss 0.0203 mae 11.35 r2 0.289 pred 38.9±9.7
+epoch 029 | train loss 0.0204 mae 11.40 r2 0.275 pred 39.7±8.9 | val loss 0.0200 mae 11.25 r2 0.301 pred 39.6±8.9
+epoch 030 | train loss 0.0203 mae 11.38 r2 0.278 pred 39.7±9.0 | val loss 0.0201 mae 11.31 r2 0.296 pred 40.1±8.5
+epoch 031 | train loss 0.0203 mae 11.38 r2 0.280 pred 39.7±9.0 | val loss 0.0201 mae 11.27 r2 0.297 pred 41.0±9.3
+epoch 032 | train loss 0.0202 mae 11.36 r2 0.281 pred 39.7±9.0 | val loss 0.0203 mae 11.33 r2 0.288 pred 40.9±9.8
+epoch 033 | train loss 0.0201 mae 11.33 r2 0.285 pred 39.7±9.0 | val loss 0.0201 mae 11.31 r2 0.295 pred 38.7±8.3
+epoch 034 | train loss 0.0201 mae 11.31 r2 0.287 pred 39.7±9.1 | val loss 0.0201 mae 11.24 r2 0.297 pred 40.4±9.7
+epoch 035 | train loss 0.0200 mae 11.31 r2 0.288 pred 39.7±9.1 | val loss 0.0207 mae 11.39 r2 0.276 pred 42.7±9.4
+epoch 036 | train loss 0.0197 mae 11.21 r2 0.299 pred 39.8±9.2 | val loss 0.0197 mae 11.15 r2 0.312 pred 39.9±9.4
+epoch 037 | train loss 0.0196 mae 11.15 r2 0.303 pred 39.7±9.3 | val loss 0.0200 mae 11.21 r2 0.299 pred 41.8±9.9
+epoch 038 | train loss 0.0196 mae 11.17 r2 0.303 pred 39.8±9.3 | val loss 0.0201 mae 11.28 r2 0.297 pred 38.0±9.2
+epoch 039 | train loss 0.0196 mae 11.15 r2 0.305 pred 39.7±9.3 | val loss 0.0196 mae 11.11 r2 0.312 pred 40.8±9.7
+epoch 040 | train loss 0.0195 mae 11.13 r2 0.307 pred 39.7±9.3 | val loss 0.0198 mae 11.15 r2 0.307 pred 40.7±10.6
+epoch 041 | train loss 0.0194 mae 11.12 r2 0.309 pred 39.8±9.4 | val loss 0.0195 mae 11.12 r2 0.316 pred 40.1±9.4
+epoch 042 | train loss 0.0193 mae 11.08 r2 0.313 pred 39.8±9.4 | val loss 0.0198 mae 11.15 r2 0.308 pred 41.3±10.1
+epoch 043 | train loss 0.0193 mae 11.08 r2 0.313 pred 39.8±9.4 | val loss 0.0195 mae 11.08 r2 0.317 pred 40.6±10.1
+epoch 044 | train loss 0.0192 mae 11.04 r2 0.317 pred 39.8±9.5 | val loss 0.0195 mae 11.08 r2 0.317 pred 39.9±10.1
+epoch 045 | train loss 0.0193 mae 11.06 r2 0.316 pred 39.8±9.4 | val loss 0.0207 mae 11.33 r2 0.276 pred 42.7±11.1
+epoch 046 | train loss 0.0192 mae 11.04 r2 0.317 pred 39.8±9.5 | val loss 0.0197 mae 11.12 r2 0.310 pred 41.0±10.3
+epoch 047 | train loss 0.0192 mae 11.03 r2 0.318 pred 39.8±9.5 | val loss 0.0195 mae 11.08 r2 0.319 pred 40.1±9.6
+epoch 048 | train loss 0.0191 mae 11.03 r2 0.320 pred 39.8±9.5 | val loss 0.0197 mae 11.14 r2 0.309 pred 41.6±10.0
+epoch 049 | train loss 0.0191 mae 11.02 r2 0.320 pred 39.8±9.5 | val loss 0.0194 mae 11.06 r2 0.321 pred 39.2±9.6
+epoch 050 | train loss 0.0191 mae 11.02 r2 0.320 pred 39.8±9.5 | val loss 0.0194 mae 11.05 r2 0.322 pred 39.7±9.6
+epoch 051 | train loss 0.0190 mae 10.99 r2 0.323 pred 39.8±9.6 | val loss 0.0194 mae 11.03 r2 0.322 pred 39.9±10.2
+epoch 052 | train loss 0.0190 mae 10.97 r2 0.325 pred 39.8±9.6 | val loss 0.0195 mae 11.08 r2 0.318 pred 40.6±10.3
+epoch 053 | train loss 0.0190 mae 10.99 r2 0.324 pred 39.8±9.6 | val loss 0.0194 mae 11.05 r2 0.322 pred 39.6±9.6
+epoch 054 | train loss 0.0189 mae 10.95 r2 0.329 pred 39.8±9.6 | val loss 0.0196 mae 11.08 r2 0.314 pred 41.4±10.1
+epoch 055 | train loss 0.0189 mae 10.95 r2 0.329 pred 39.8±9.6 | val loss 0.0196 mae 11.05 r2 0.313 pred 41.5±10.8
+epoch 056 | train loss 0.0188 mae 10.94 r2 0.330 pred 39.8±9.7 | val loss 0.0194 mae 11.02 r2 0.322 pred 40.7±10.2
+epoch 057 | train loss 0.0188 mae 10.92 r2 0.333 pred 39.8±9.7 | val loss 0.0193 mae 11.02 r2 0.324 pred 40.7±9.8
+epoch 058 | train loss 0.0188 mae 10.91 r2 0.332 pred 39.8±9.7 | val loss 0.0196 mae 11.11 r2 0.313 pred 39.3±10.2
+epoch 059 | train loss 0.0188 mae 10.91 r2 0.332 pred 39.8±9.7 | val loss 0.0196 mae 11.05 r2 0.315 pred 41.1±10.8
+epoch 060 | train loss 0.0187 mae 10.88 r2 0.336 pred 39.8±9.8 | val loss 0.0193 mae 11.04 r2 0.323 pred 39.0±9.7
+finished epoch 60; best val loss 0.0193; latest checkpoint saved to /net/scc1/scratch/lucaslu/checkpoints/last_CNN_LSTM_checkpoint.pt
