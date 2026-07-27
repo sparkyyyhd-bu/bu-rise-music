@@ -225,7 +225,7 @@ def main():
     accumulation_steps = 4
     loader_options = {
         "batch_size": batch_size,
-        "num_workers": 16,
+        "num_workers": int(os.environ.get("NSLOTS", "8")),
         "pin_memory": device.type == "cuda",
         "collate_fn": collate_fn,
     }

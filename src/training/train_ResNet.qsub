@@ -3,7 +3,7 @@
 #$ -P rise-grid
 #$ -N train_ResNet_fixed
 #$ -l h_rt=12:00:00
-#$ -pe omp 16
+#$ -pe omp 8
 #$ -l mem_per_core=5G
 #$ -l gpus=1
 #$ -l gpu_c=8.0
