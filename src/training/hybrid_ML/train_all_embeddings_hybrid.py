@@ -21,14 +21,14 @@ from sklearn.neural_network import MLPRegressor
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import LinearSVR, SVR
-from torch.utils.data import random_split
 from xgboost import XGBRegressor
+from training.data_utils import grouped_track_id_split
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 USER = os.environ["USER"]
 CHECKPOINT_DIR = Path("/net/scc1/scratch") / USER / "checkpoints"
-OUTPUT_PATH = CHECKPOINT_DIR / "best_all_embeddings_hybrid_model.joblib"
+OUTPUT_PATH = CHECKPOINT_DIR / "best_all_embeddings_hybrid_fixed_model.joblib"
 TRACKS_CSV = (
     REPO_ROOT
     / "data"
@@ -80,7 +80,7 @@ SPOTIFY_AUDIO_FEATURES = [
 
 
 def load_embeddings(model_name, expected_dimensions):
-    path = CHECKPOINT_DIR / f"{model_name}_embeddings.npz"
+    path = CHECKPOINT_DIR / f"{model_name}_fixed_embeddings.npz"
     with np.load(path, allow_pickle=False) as cache:
         track_ids = cache["track_ids"].astype(str)
         embeddings = cache["embeddings"].astype(np.float32, copy=False)
@@ -347,18 +347,11 @@ def main():
         tabular, on="id", how="inner", validate="one_to_one"
     ).set_index("id")
 
-    val_size = max(1, int(0.15 * len(split_track_ids)))
-    test_size = max(1, int(0.15 * len(split_track_ids)))
-    train_size = len(split_track_ids) - val_size - test_size
-    if train_size < 1:
-        raise ValueError("at least three cached embeddings are required")
-    train_subset, val_subset, _ = random_split(
-        range(len(split_track_ids)),
-        [train_size, val_size, test_size],
-        generator=torch.Generator().manual_seed(0),
+    train_track_ids, validation_track_ids, _ = grouped_track_id_split(
+        split_track_ids
     )
-    train_ids = set(split_track_ids[np.asarray(train_subset.indices)])
-    validation_ids = set(split_track_ids[np.asarray(val_subset.indices)])
+    train_ids = set(train_track_ids)
+    validation_ids = set(validation_track_ids)
     train = combined.loc[combined.index.isin(train_ids)]
     validation = combined.loc[combined.index.isin(validation_ids)]
     if train.empty or validation.empty:
@@ -443,7 +436,7 @@ def main():
         "audio_feature_names": audio_feature_names,
         "embedding_paths": embedding_paths,
         "grouped_feature_importance": importances,
-        "split_seed": 0,
+        "split": "artist_album_isolated_fixed_70_15_15",
         "random_seed": RANDOM_SEED,
         "results": results,
         "feature_importance_model": "xgboost",

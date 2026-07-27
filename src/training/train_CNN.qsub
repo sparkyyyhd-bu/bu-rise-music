@@ -1,7 +1,7 @@
 #!/bin/bash -l
 
 #$ -P rise-grid          # project
-#$ -N train_CNN          # job name
+#$ -N train_CNN_fixed    # job name
 #$ -l h_rt=12:00:00      # walltime, adjust as needed (bumped for larger model)
 #$ -pe omp 16            # CPU cores, matches num_workers in train.py
 #$ -l mem_per_core=5G    # 80 GB host RAM total
@@ -20,8 +20,8 @@ cd "$REPO_DIR"
 # train_CNN.o<job_id>/train_CNN.e<job_id> files remain as a fallback for any
 # failure that happens before these redirects are established.
 mkdir -p "$REPO_DIR/logs"
-exec >>"$REPO_DIR/logs/train_CNN.${JOB_ID}.qlog" \
-     2>>"$REPO_DIR/logs/train_CNN.${JOB_ID}.err"
+exec >>"$REPO_DIR/logs/train_CNN_fixed.${JOB_ID}.qlog" \
+     2>>"$REPO_DIR/logs/train_CNN_fixed.${JOB_ID}.err"
 echo "job ${JOB_ID} started on $(hostname) at $(date)"
 
 # Needs modern torch, which the cluster's pytorch module (tops out at 1.13.1)
@@ -45,7 +45,7 @@ export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 WALLTIME_SECONDS=$((12*3600))
 WARN_BUFFER_SECONDS=300
 python -u src/training/print_best_stats.py \
-    --checkpoint "/net/scc1/scratch/$USER/checkpoints/last_CNN_checkpoint.pt" \
+    --checkpoint "/net/scc1/scratch/$USER/checkpoints/last_CNN_fixed_checkpoint.pt" \
     --sleep-seconds $((WALLTIME_SECONDS - WARN_BUFFER_SECONDS)) &
 WATCHDOG_PID=$!
 trap 'kill "$WATCHDOG_PID" 2>/dev/null' EXIT

@@ -8,10 +8,11 @@ import os
 from pathlib import Path
 
 import torch
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader
 
 from training.data_utils import (
     MelPopularityDataset,
+    grouped_train_val_test_split,
     load_popularity_by_id,
     sync_to_local_scratch,
 )
@@ -25,27 +26,25 @@ from training.train_ResNet import PopularityResNet, collate_fn as resnet_collate
 from training.train_ViT import PopularityViT, collate_fn as vit_collate
 
 
-SPLIT_SEED = 0
-HOLDOUT_FRACTION = 0.15
 MODEL_CONFIGS = {
     "CNN": {
         "factory": PopularityCNN,
         "collate_fn": cnn_collate,
-        "checkpoint": "best_CNN_model.pt",
+        "checkpoint": "best_CNN_fixed_model.pt",
         "batch_size": 16,
         "normalize": True,
     },
     "CNN_LSTM": {
         "factory": PopularityCNNLSTM,
         "collate_fn": cnn_lstm_collate,
-        "checkpoint": "best_CNN_LSTM_model.pt",
+        "checkpoint": "best_CNN_LSTM_fixed_model.pt",
         "batch_size": 32,
         "normalize": True,
     },
     "LSTM": {
         "factory": PopularityLSTM,
         "collate_fn": lstm_collate,
-        "checkpoint": "best_LSTM_small_model.pt",
+        "checkpoint": "best_LSTM_small_fixed_model.pt",
         "batch_size": 64,
         "normalize": False,
     },
@@ -54,14 +53,14 @@ MODEL_CONFIGS = {
         # download ImageNet weights.
         "factory": lambda: PopularityResNet(weights=None),
         "collate_fn": resnet_collate,
-        "checkpoint": "best_ResNet_model.pt",
+        "checkpoint": "best_ResNet_fixed_model.pt",
         "batch_size": 16,
         "normalize": True,
     },
     "ViT": {
         "factory": lambda: PopularityViT(weights=None),
         "collate_fn": vit_collate,
-        "checkpoint": "best_ViT_model.pt",
+        "checkpoint": "best_ViT_fixed_model.pt",
         "batch_size": 12,
         "normalize": True,
     },
@@ -106,7 +105,7 @@ def parse_args():
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("results") / "nn_testing",
+        default=Path("results") / "nn_testing_fixed",
     )
     parser.add_argument("--num-workers", type=int, default=8)
     parser.add_argument("--device", default=None, help="For example cuda, cuda:0, or cpu.")
@@ -136,17 +135,7 @@ def make_test_loader(config, mel_dir, num_workers, device):
     if len(dataset) < 3:
         raise RuntimeError(f"need at least 3 labeled mels, found {len(dataset)}")
 
-    val_size = max(1, int(HOLDOUT_FRACTION * len(dataset)))
-    test_size = max(1, int(HOLDOUT_FRACTION * len(dataset)))
-    train_size = len(dataset) - val_size - test_size
-    if train_size < 1:
-        raise RuntimeError("dataset is too small for the training 70/15/15 split")
-
-    _, _, test_set = random_split(
-        dataset,
-        [train_size, val_size, test_size],
-        generator=torch.Generator().manual_seed(SPLIT_SEED),
-    )
+    _, _, test_set = grouped_train_val_test_split(dataset)
     loader = DataLoader(
         test_set,
         batch_size=config["batch_size"],

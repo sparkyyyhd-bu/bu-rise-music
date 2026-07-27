@@ -11,7 +11,7 @@ Submit all models on the cluster from the repository root:
 qsub src/testing/evaluate_nn_models.qsub
 ```
 
-Results are written to `results/nn_testing/metrics.json` and `metrics.csv`.
+Results are written to `results/nn_testing_fixed/metrics.json` and `metrics.csv`.
 To run one or more models directly:
 
 ```bash

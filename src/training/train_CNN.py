@@ -3,13 +3,14 @@ import os
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.data import random_split, DataLoader
+from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import LambdaLR, ReduceLROnPlateau
 from torchmetrics import MeanAbsoluteError, R2Score
 from training.data_utils import (
     MelPopularityDataset,
     augment_mels,
     checkpoint_matches_model,
+    grouped_train_val_test_split,
     load_popularity_by_id,
     sync_to_local_scratch,
 )
@@ -115,14 +116,7 @@ def main():
     dataset = MelPopularityDataset(mel_dir, popularity_by_id)
     print(f"loaded {len(dataset)} labeled mel spectrograms")
 
-    val_size = max(1, int(0.15 * len(dataset)))
-    test_size = max(1, int(0.15 * len(dataset)))
-    train_size = len(dataset) - val_size - test_size
-    train_set, val_set, test_set = random_split(
-        dataset,
-        [train_size, val_size, test_size],
-        generator=torch.Generator().manual_seed(0),
-    )
+    train_set, val_set, _ = grouped_train_val_test_split(dataset)
 
     # Early convolutional feature maps retain the full spectrogram resolution
     # and are large during backpropagation.
@@ -184,8 +178,8 @@ def main():
         },
         "warmup_epochs": warmup_epochs,
     }
-    last_checkpoint_path = os.path.join(checkpoint_dir, "last_CNN_checkpoint.pt")
-    best_checkpoint_path = os.path.join(checkpoint_dir, "best_CNN_model.pt")
+    last_checkpoint_path = os.path.join(checkpoint_dir, "last_CNN_fixed_checkpoint.pt")
+    best_checkpoint_path = os.path.join(checkpoint_dir, "best_CNN_fixed_model.pt")
     start_epoch = 0
     best_val_loss = float("inf")
 

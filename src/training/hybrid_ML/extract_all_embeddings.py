@@ -37,35 +37,35 @@ NUM_WORKERS = 8
 
 MODEL_CONFIGS = {
     "CNN": {
-        "checkpoint": "best_CNN_model.pt",
+        "checkpoint": "best_CNN_fixed_model.pt",
         "factory": PopularityCNN,
         "dimensions": 64,
         "batch_size": 32,
         "normalize": True,
     },
     "CNN_LSTM": {
-        "checkpoint": "best_CNN_LSTM_model.pt",
+        "checkpoint": "best_CNN_LSTM_fixed_model.pt",
         "factory": PopularityCNNLSTM,
         "dimensions": 128,
         "batch_size": 32,
         "normalize": True,
     },
     "LSTM": {
-        "checkpoint": "best_LSTM_small_model.pt",
+        "checkpoint": "best_LSTM_small_fixed_model.pt",
         "factory": PopularityLSTM,
         "dimensions": 512,
         "batch_size": 64,
         "normalize": False,
     },
     "ResNet": {
-        "checkpoint": "best_ResNet_model.pt",
+        "checkpoint": "best_ResNet_fixed_model.pt",
         "factory": lambda: PopularityResNet(weights=None),
         "dimensions": 512,
         "batch_size": 32,
         "normalize": True,
     },
     "ViT": {
-        "checkpoint": "best_ViT_model.pt",
+        "checkpoint": "best_ViT_fixed_model.pt",
         "factory": lambda: PopularityViT(weights=None),
         "dimensions": 768,
         "batch_size": 12,
@@ -83,6 +83,7 @@ class MelTrackDataset(Dataset):
             and entry.name.endswith(MEL_SUFFIX)
             and entry.name[: -len(MEL_SUFFIX)] in labeled_ids
         ]
+        self.entries.sort(key=lambda item: item[1])
         self.normalize = normalize
         if not self.entries:
             raise ValueError(f"no labeled {MEL_SUFFIX} files found in {mel_dir}")
@@ -207,7 +208,7 @@ def extract_model(model_name, mel_dir, labeled_ids, device):
         raise ValueError(
             f"{model_name} produced {embedding_array.shape}, expected {expected_shape}"
         )
-    output_path = CHECKPOINT_DIR / f"{model_name}_embeddings.npz"
+    output_path = CHECKPOINT_DIR / f"{model_name}_fixed_embeddings.npz"
     np.savez_compressed(
         output_path,
         track_ids=np.asarray(track_ids),

@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.optim.lr_scheduler import LambdaLR, ReduceLROnPlateau
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader
 from torchmetrics import MeanAbsoluteError, R2Score
 from torchvision.models import ViT_B_16_Weights, vit_b_16
 
@@ -13,6 +13,7 @@ from training.data_utils import (
     MelPopularityDataset,
     augment_vit_mels,
     checkpoint_matches_model,
+    grouped_train_val_test_split,
     load_popularity_by_id,
     sync_to_local_scratch,
 )
@@ -218,14 +219,7 @@ def main():
 
     dataset = MelPopularityDataset(mel_dir, load_popularity_by_id())
     print(f"loaded {len(dataset)} labeled mel spectrograms")
-    val_size = max(1, int(0.15 * len(dataset)))
-    test_size = max(1, int(0.15 * len(dataset)))
-    train_size = len(dataset) - val_size - test_size
-    train_set, val_set, _ = random_split(
-        dataset,
-        [train_size, val_size, test_size],
-        generator=torch.Generator().manual_seed(0),
-    )
+    train_set, val_set, _ = grouped_train_val_test_split(dataset)
 
     batch_size = 12
     accumulation_steps = 4
@@ -288,9 +282,11 @@ def main():
         "fine_tune_encoder": True,
     }
     last_checkpoint_path = os.path.join(
-        checkpoint_dir, "last_ViT_checkpoint.pt"
+        checkpoint_dir, "last_ViT_fixed_checkpoint.pt"
     )
-    best_checkpoint_path = os.path.join(checkpoint_dir, "best_ViT_model.pt")
+    best_checkpoint_path = os.path.join(
+        checkpoint_dir, "best_ViT_fixed_model.pt"
+    )
     start_epoch = 0
     best_val_loss = float("inf")
 

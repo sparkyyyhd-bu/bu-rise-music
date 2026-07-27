@@ -1,6 +1,8 @@
 from torch.utils.data import Dataset
 import torch
 import pandas as pd
+import ast
+import hashlib
 import os
 from tqdm import tqdm 
 import shutil
@@ -10,6 +12,8 @@ import torch.nn.functional as F
 MEL_SUFFIX = "_mel.pt"
 repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 tracks_csv = os.path.join(repo_root, "data", "SpotGenTrack", "Data Sources", "spotify_tracks.csv")
+FIXED_SPLIT_SEED = 0
+FIXED_SPLIT_FRACTIONS = (0.70, 0.15, 0.15)
 
 
 def spec_augment(
@@ -217,6 +221,14 @@ class MelPopularityDataset(Dataset):
             if popularity is None:
                 continue
             self.entries.append((entry.path, popularity))
+        # Split membership must depend on track identity, never filesystem order.
+        self.entries.sort(
+            key=lambda item: os.path.basename(item[0])[: -len(MEL_SUFFIX)]
+        )
+        self.track_ids = [
+            os.path.basename(path)[: -len(MEL_SUFFIX)]
+            for path, _ in self.entries
+        ]
 
     def __len__(self):
         return len(self.entries)
@@ -230,6 +242,180 @@ class MelPopularityDataset(Dataset):
             mel = (mel - mel.mean()) / (mel.std() + 1e-5)
         target = torch.tensor(popularity / 100.0, dtype=torch.float32)
         return mel, target
+
+
+def _parse_artist_ids(value):
+    if pd.isna(value):
+        return []
+    try:
+        parsed = ast.literal_eval(str(value))
+    except (SyntaxError, ValueError):
+        parsed = [value]
+    if isinstance(parsed, str):
+        parsed = [parsed]
+    return sorted({str(artist) for artist in parsed if str(artist)})
+
+
+def grouped_train_val_test_split(
+    dataset,
+    metadata_csv=tracks_csv,
+    fractions=FIXED_SPLIT_FRACTIONS,
+    seed=FIXED_SPLIT_SEED,
+):
+    """Return deterministic 70/15/15 subsets with no artist/album leakage.
+
+    Tracks sharing an artist or album are unioned into connected components.
+    Components are indivisible, so the resulting fractions are the closest
+    deterministic allocation practical rather than necessarily exact.
+    """
+    from torch.utils.data import Subset
+
+    if len(fractions) != 3 or any(fraction <= 0 for fraction in fractions):
+        raise ValueError("fractions must contain three positive values")
+    total_fraction = sum(fractions)
+    fractions = tuple(fraction / total_fraction for fraction in fractions)
+    track_ids = list(dataset.track_ids)
+    if len(track_ids) < 3:
+        raise RuntimeError("need at least three tracks for a train/validation/test split")
+    if len(track_ids) != len(set(track_ids)):
+        raise RuntimeError("mel dataset contains duplicate track IDs")
+
+    metadata = pd.read_csv(
+        metadata_csv,
+        usecols=["id", "album_id", "artists_id"],
+        dtype=str,
+    ).dropna(subset=["id"])
+    wanted = set(track_ids)
+    metadata = metadata.loc[metadata["id"].isin(wanted)]
+    found = set(metadata["id"])
+    missing = sorted(wanted - found)
+    if missing:
+        preview = ", ".join(missing[:5])
+        raise RuntimeError(
+            f"{len(missing)} mel tracks have no artist/album metadata"
+            f" (first: {preview})"
+        )
+
+    parent = {track_id: track_id for track_id in track_ids}
+    component_size = {track_id: 1 for track_id in track_ids}
+
+    def find(track_id):
+        while parent[track_id] != track_id:
+            parent[track_id] = parent[parent[track_id]]
+            track_id = parent[track_id]
+        return track_id
+
+    def union(left, right):
+        left_root, right_root = find(left), find(right)
+        if left_root == right_root:
+            return
+        if component_size[left_root] < component_size[right_root]:
+            left_root, right_root = right_root, left_root
+        parent[right_root] = left_root
+        component_size[left_root] += component_size[right_root]
+
+    entity_owner = {}
+    for row in metadata.itertuples(index=False):
+        entities = []
+        if pd.notna(row.album_id) and row.album_id:
+            entities.append(("album", row.album_id))
+        entities.extend(("artist", artist) for artist in _parse_artist_ids(row.artists_id))
+        for entity in entities:
+            owner = entity_owner.setdefault(entity, row.id)
+            union(row.id, owner)
+
+    components = {}
+    for track_id in track_ids:
+        components.setdefault(find(track_id), []).append(track_id)
+
+    # Largest-first allocation minimizes deviation while keeping the result
+    # deterministic. The hash provides a stable tie-break independent of CSV
+    # and filesystem ordering.
+    def component_key(ids):
+        digest = hashlib.sha256(
+            f"{seed}:{min(ids)}".encode("utf-8")
+        ).hexdigest()
+        return (-len(ids), digest)
+
+    groups = sorted(components.values(), key=component_key)
+    targets = [fraction * len(track_ids) for fraction in fractions]
+    split_ids = [set(), set(), set()]
+    counts = [0, 0, 0]
+    for group in groups:
+        best_split = min(
+            range(3),
+            key=lambda candidate: (
+                sum(
+                    (
+                        counts[index]
+                        + (len(group) if index == candidate else 0)
+                        - targets[index]
+                    )
+                    ** 2
+                    for index in range(3)
+                ),
+                candidate,
+            ),
+        )
+        split_ids[best_split].update(group)
+        counts[best_split] += len(group)
+
+    if any(not ids for ids in split_ids):
+        raise RuntimeError(
+            "artist/album grouping produced an empty split; cannot satisfy 70/15/15"
+        )
+    entity_splits = {}
+    for row in metadata.itertuples(index=False):
+        split_index = next(
+            index for index, ids in enumerate(split_ids) if row.id in ids
+        )
+        entities = []
+        if pd.notna(row.album_id) and row.album_id:
+            entities.append(("album", row.album_id))
+        entities.extend(("artist", artist) for artist in _parse_artist_ids(row.artists_id))
+        for entity in entities:
+            previous = entity_splits.setdefault(entity, split_index)
+            if previous != split_index:
+                raise RuntimeError(
+                    f"{entity[0]} {entity[1]} leaked across grouped splits"
+                )
+    indices = [
+        [index for index, track_id in enumerate(track_ids) if track_id in ids]
+        for ids in split_ids
+    ]
+    fingerprint = hashlib.sha256(
+        "\n".join(
+            f"{name}:{track_id}"
+            for name, ids in zip(("train", "validation", "test"), split_ids)
+            for track_id in sorted(ids)
+        ).encode("utf-8")
+    ).hexdigest()[:16]
+    print(
+        "fixed artist/album-isolated split "
+        f"train={counts[0]} ({counts[0] / len(track_ids):.1%}), "
+        f"validation={counts[1]} ({counts[1] / len(track_ids):.1%}), "
+        f"test={counts[2]} ({counts[2] / len(track_ids):.1%}), "
+        f"fingerprint={fingerprint}"
+    )
+    return tuple(Subset(dataset, split_indices) for split_indices in indices)
+
+
+def grouped_track_id_split(track_ids, **kwargs):
+    """Return the shared grouped split as track-ID lists."""
+
+    class _TrackIds:
+        def __init__(self, ids):
+            self.track_ids = list(ids)
+
+        def __len__(self):
+            return len(self.track_ids)
+
+    source = _TrackIds(track_ids)
+    subsets = grouped_train_val_test_split(source, **kwargs)
+    return tuple(
+        [source.track_ids[index] for index in subset.indices]
+        for subset in subsets
+    )
     
 def load_popularity_by_id():
     df = pd.read_csv(tracks_csv, usecols=["id", "popularity"])

@@ -1,7 +1,7 @@
 #!/bin/bash -l
 
 #$ -P rise-grid
-#$ -N test_NN_models
+#$ -N test_NN_models_fixed
 #$ -l h_rt=04:00:00
 #$ -pe omp 8
 #$ -l mem_per_core=5G
@@ -17,8 +17,8 @@ REPO_DIR="${REPO_DIR:-$PROJECT_STORAGE/bu-rise-music}"
 cd "$REPO_DIR"
 
 mkdir -p "$REPO_DIR/logs"
-exec >>"$REPO_DIR/logs/test_NN_models.${JOB_ID}.qlog" \
-     2>>"$REPO_DIR/logs/test_NN_models.${JOB_ID}.err"
+exec >>"$REPO_DIR/logs/test_NN_models_fixed.${JOB_ID}.qlog" \
+     2>>"$REPO_DIR/logs/test_NN_models_fixed.${JOB_ID}.err"
 echo "job ${JOB_ID} started on $(hostname) at $(date)"
 
 VENV_DIR="$PROJECT_STORAGE/venvs/bu-rise-train"
@@ -39,5 +39,5 @@ python -u src/testing/evaluate_nn_models.py \
     --mel-dir "/net/scc1/scratch/$USER/mel_spectrograms" \
     --local-scratch-dir "/scratch/$USER" \
     --checkpoint-dir "/net/scc1/scratch/$USER/checkpoints" \
-    --output-dir "$REPO_DIR/results/nn_testing" \
+    --output-dir "$REPO_DIR/results/nn_testing_fixed" \
     --num-workers "${NSLOTS:-8}"
