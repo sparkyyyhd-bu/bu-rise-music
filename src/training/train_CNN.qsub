@@ -3,8 +3,7 @@
 #$ -P rise-grid          # project
 #$ -N train_CNN_fixed    # job name
 #$ -l h_rt=12:00:00      # walltime, adjust as needed (bumped for larger model)
-#$ -pe omp 16            # CPU cores, matches num_workers in train.py
-#$ -l mem_per_core=5G    # 80 GB host RAM total
+#$ -pe omp 8             # CPU cores
 #$ -l gpus=1             # request 1 GPU
 #$ -l gpu_c=8.0          # Ampere or newer GPU
 #$ -l gpu_memory=40G     # enough VRAM for large training batches
