@@ -1,0 +1,52 @@
+#!/bin/bash -l
+
+#$ -P rise-grid          # project
+#$ -N train_CNN_fixed    # job name
+#$ -l h_rt=12:00:00      # walltime, adjust as needed (bumped for larger model)
+#$ -pe omp 8             # CPU cores
+#$ -l gpus=1             # request 1 GPU
+#$ -l gpu_c=8.0          # Ampere or newer GPU
+#$ -l gpu_memory=40G     # enough VRAM for large training batches
+
+module load python3/3.10.12
+module load cuda/12.2
+
+PROJECT_STORAGE="${PROJECT_STORAGE:-/project/rise-grid/$USER}"
+REPO_DIR="${REPO_DIR:-$PROJECT_STORAGE/bu-rise-music}"
+cd "$REPO_DIR"
+
+# Keep unique, persistent logs for every submission. Grid Engine's default
+# train_CNN.o<job_id>/train_CNN.e<job_id> files remain as a fallback for any
+# failure that happens before these redirects are established.
+mkdir -p "$REPO_DIR/logs"
+exec >>"$REPO_DIR/logs/train_CNN_fixed.${JOB_ID}.qlog" \
+     2>>"$REPO_DIR/logs/train_CNN_fixed.${JOB_ID}.err"
+echo "job ${JOB_ID} started on $(hostname) at $(date)"
+
+# Needs modern torch, which the cluster's pytorch module (tops out at 1.13.1)
+# can't provide. Keep the large environment and pip cache on persistent project
+# storage, outside the small home-directory quota.
+VENV_DIR="$PROJECT_STORAGE/venvs/bu-rise-train"
+export PIP_CACHE_DIR="$PROJECT_STORAGE/.cache/pip"
+mkdir -p "$(dirname "$VENV_DIR")" "$PIP_CACHE_DIR"
+if [ ! -d "$VENV_DIR" ]; then
+    python3 -m venv "$VENV_DIR"
+fi
+source "$VENV_DIR/bin/activate"
+pip install --upgrade pip setuptools
+pip install --upgrade -r requirements.txt
+
+export PYTHONPATH="$REPO_DIR/src:$PYTHONPATH"
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+
+# Print the best stats seen so far a bit before walltime runs out, so
+# results land in the log even if SGE kills the job mid-epoch.
+WALLTIME_SECONDS=$((12*3600))
+WARN_BUFFER_SECONDS=300
+python -u src/training/print_best_stats.py \
+    --checkpoint "/net/scc1/scratch/$USER/checkpoints/last_CNN_fixed_checkpoint.pt" \
+    --sleep-seconds $((WALLTIME_SECONDS - WARN_BUFFER_SECONDS)) &
+WATCHDOG_PID=$!
+trap 'kill "$WATCHDOG_PID" 2>/dev/null' EXIT
+
+python -u src/training/train_CNN.py

@@ -1,0 +1,44 @@
+#!/bin/bash -l
+
+#$ -P rise-grid
+#$ -N train_ResNet_fixed
+#$ -l h_rt=12:00:00
+#$ -pe omp 8
+#$ -l gpus=1
+#$ -l gpu_c=8.0
+#$ -l gpu_memory=40G
+
+module load python3/3.10.12
+module load cuda/12.2
+
+PROJECT_STORAGE="${PROJECT_STORAGE:-/project/rise-grid/$USER}"
+REPO_DIR="${REPO_DIR:-$PROJECT_STORAGE/bu-rise-music}"
+cd "$REPO_DIR"
+
+mkdir -p "$REPO_DIR/logs"
+exec >>"$REPO_DIR/logs/train_ResNet_fixed.${JOB_ID}.qlog" \
+     2>>"$REPO_DIR/logs/train_ResNet_fixed.${JOB_ID}.err"
+echo "job ${JOB_ID} started on $(hostname) at $(date)"
+
+VENV_DIR="$PROJECT_STORAGE/venvs/bu-rise-train"
+export PIP_CACHE_DIR="$PROJECT_STORAGE/.cache/pip"
+mkdir -p "$(dirname "$VENV_DIR")" "$PIP_CACHE_DIR"
+if [ ! -d "$VENV_DIR" ]; then
+    python3 -m venv "$VENV_DIR"
+fi
+source "$VENV_DIR/bin/activate"
+pip install --upgrade pip setuptools
+pip install --upgrade -r requirements.txt
+
+export PYTHONPATH="$REPO_DIR/src:$PYTHONPATH"
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+
+WALLTIME_SECONDS=$((12*3600))
+WARN_BUFFER_SECONDS=300
+python -u src/training/print_best_stats.py \
+    --checkpoint "/net/scc1/scratch/$USER/checkpoints/last_ResNet_fixed_checkpoint.pt" \
+    --sleep-seconds $((WALLTIME_SECONDS - WARN_BUFFER_SECONDS)) &
+WATCHDOG_PID=$!
+trap 'kill "$WATCHDOG_PID" 2>/dev/null' EXIT
+
+python -u src/training/train_ResNet.py

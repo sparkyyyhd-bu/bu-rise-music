@@ -1,0 +1,4 @@
+SpotGenTrack/
+.venv-train/
+/models/
+/data/

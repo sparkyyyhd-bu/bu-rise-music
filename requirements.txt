@@ -1,0 +1,12 @@
+pandas
+requests
+kagglehub
+ipython
+torch
+torchvision
+torchaudio
+torchmetrics
+tqdm
+scikit-learn
+joblib
+xgboost
