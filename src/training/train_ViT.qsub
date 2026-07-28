@@ -6,8 +6,8 @@
 #$ -pe omp 8
 #$ -l mem_per_core=5G
 #$ -l gpus=1
-#$ -l gpu_c=8.0
-#$ -l gpu_memory=80G
+#$ -l gpu_c=16.0
+#$ -l gpu_memory=40G
 
 module load python3/3.10.12
 module load cuda/12.2
