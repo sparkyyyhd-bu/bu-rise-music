@@ -1,7 +1,7 @@
 #!/bin/bash -l
 
 #$ -P rise-grid
-#$ -N test_NN_models_fixed
+#$ -N test_NN_models
 #$ -l h_rt=04:00:00
 #$ -pe omp 8
 #$ -l gpus=1
@@ -16,8 +16,9 @@ REPO_DIR="${REPO_DIR:-$PROJECT_STORAGE/bu-rise-music}"
 cd "$REPO_DIR"
 
 mkdir -p "$REPO_DIR/logs"
-exec >>"$REPO_DIR/logs/test_NN_models_fixed.${JOB_ID}.qlog" \
-     2>>"$REPO_DIR/logs/test_NN_models_fixed.${JOB_ID}.err"
+SPLIT_MODE=legacy
+exec >>"$REPO_DIR/logs/test_NN_models_${SPLIT_MODE}.${JOB_ID}.qlog" \
+     2>>"$REPO_DIR/logs/test_NN_models_${SPLIT_MODE}.${JOB_ID}.err"
 echo "job ${JOB_ID} started on $(hostname) at $(date)"
 
 VENV_DIR="$PROJECT_STORAGE/venvs/bu-rise-train"
@@ -34,9 +35,10 @@ export PYTHONPATH="$REPO_DIR/src:$PYTHONPATH"
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 
 python -u src/testing/evaluate_nn_models.py \
+    --split-mode "$SPLIT_MODE" \
     --models all \
     --mel-dir "/net/scc1/scratch/$USER/mel_spectrograms" \
     --local-scratch-dir "/scratch/$USER" \
     --checkpoint-dir "/net/scc1/scratch/$USER/checkpoints" \
-    --output-dir "$REPO_DIR/results/nn_testing_fixed" \
+    --output-dir "$REPO_DIR/results/nn_testing_${SPLIT_MODE}" \
     --num-workers "${NSLOTS:-8}"

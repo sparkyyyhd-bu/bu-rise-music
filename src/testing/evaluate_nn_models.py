@@ -12,9 +12,9 @@ from torch.utils.data import DataLoader
 
 from training.data_utils import (
     MelPopularityDataset,
-    grouped_train_val_test_split,
     load_popularity_by_id,
     sync_to_local_scratch,
+    train_val_test_split,
 )
 from training.train_CNN import PopularityCNN, collate_fn as cnn_collate
 from training.train_CNN_LSTM import (
@@ -77,6 +77,12 @@ def parse_args():
         )
     )
     parser.add_argument(
+        "--split-mode",
+        choices=("fixed", "legacy"),
+        default="fixed",
+        help="Checkpoint and held-out split to evaluate.",
+    )
+    parser.add_argument(
         "--models",
         nargs="+",
         default=["all"],
@@ -105,7 +111,8 @@ def parse_args():
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("results") / "nn_testing_fixed",
+        default=None,
+        help="Default: results/nn_testing_<split-mode>.",
     )
     parser.add_argument("--num-workers", type=int, default=8)
     parser.add_argument("--device", default=None, help="For example cuda, cuda:0, or cpu.")
@@ -126,7 +133,7 @@ def select_models(requested):
     return selected
 
 
-def make_test_loader(config, mel_dir, num_workers, device):
+def make_test_loader(config, mel_dir, num_workers, device, split_mode):
     dataset = MelPopularityDataset(
         str(mel_dir),
         load_popularity_by_id(),
@@ -135,7 +142,7 @@ def make_test_loader(config, mel_dir, num_workers, device):
     if len(dataset) < 3:
         raise RuntimeError(f"need at least 3 labeled mels, found {len(dataset)}")
 
-    _, _, test_set = grouped_train_val_test_split(dataset)
+    _, _, test_set = train_val_test_split(dataset, split_mode)
     loader = DataLoader(
         test_set,
         batch_size=config["batch_size"],
@@ -215,6 +222,8 @@ def write_results(results, output_dir):
 
 def main():
     args = parse_args()
+    if args.output_dir is None:
+        args.output_dir = Path("results") / f"nn_testing_{args.split_mode}"
     selected = select_models(args.models)
     device = torch.device(
         args.device or ("cuda" if torch.cuda.is_available() else "cpu")
@@ -235,13 +244,17 @@ def main():
     for model_name in selected:
         config = MODEL_CONFIGS[model_name]
         loader, full_size = make_test_loader(
-            config, mel_dir, args.num_workers, device
+            config, mel_dir, args.num_workers, device, args.split_mode
         )
         model = config["factory"]().to(device)
-        checkpoint_path = args.checkpoint_dir / config["checkpoint"]
+        checkpoint_name = config["checkpoint"].replace(
+            "_fixed_model.pt", f"_{args.split_mode}_model.pt"
+        )
+        checkpoint_path = args.checkpoint_dir / checkpoint_name
         epoch = load_checkpoint(model, checkpoint_path, device)
         metrics = evaluate(model, loader, device)
         metrics = {
+            "split_mode": args.split_mode,
             "checkpoint": str(checkpoint_path),
             "checkpoint_epoch": epoch,
             "full_dataset_samples": full_size,

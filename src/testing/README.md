@@ -3,15 +3,17 @@
 `evaluate_nn_models.py` evaluates the best CNN, CNN-LSTM, LSTM, ResNet, and
 ViT checkpoints. For each model it recreates the training script's exact
 deterministic 70/15/15 split and evaluates only the final 15% test holdout.
+Use `--split-mode fixed` for artist/album isolation or `--split-mode legacy`
+for the reproducible random split.
 The LSTM evaluator also preserves its training-time `normalize=False` setting.
 
-Submit all models on the cluster from the repository root:
+Submit all legacy-mode models on the cluster from the repository root:
 
 ```bash
 qsub src/testing/evaluate_nn_models.qsub
 ```
 
-Results are written to `results/nn_testing_fixed/metrics.json` and `metrics.csv`.
+Results are written to `results/nn_testing_legacy/metrics.json` and `metrics.csv`.
 To run one or more models directly:
 
 ```bash

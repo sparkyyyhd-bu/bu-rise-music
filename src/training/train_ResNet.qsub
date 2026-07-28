@@ -1,7 +1,7 @@
 #!/bin/bash -l
 
 #$ -P rise-grid
-#$ -N train_ResNet_fixed
+#$ -N train_ResNet_legacy
 #$ -l h_rt=12:00:00
 #$ -pe omp 8
 #$ -l gpus=1
@@ -16,8 +16,8 @@ REPO_DIR="${REPO_DIR:-$PROJECT_STORAGE/bu-rise-music}"
 cd "$REPO_DIR"
 
 mkdir -p "$REPO_DIR/logs"
-exec >>"$REPO_DIR/logs/train_ResNet_fixed.${JOB_ID}.qlog" \
-     2>>"$REPO_DIR/logs/train_ResNet_fixed.${JOB_ID}.err"
+exec >>"$REPO_DIR/logs/train_ResNet_legacy.${JOB_ID}.qlog" \
+     2>>"$REPO_DIR/logs/train_ResNet_legacy.${JOB_ID}.err"
 echo "job ${JOB_ID} started on $(hostname) at $(date)"
 
 VENV_DIR="$PROJECT_STORAGE/venvs/bu-rise-train"
@@ -35,10 +35,11 @@ export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 
 WALLTIME_SECONDS=$((12*3600))
 WARN_BUFFER_SECONDS=300
+SPLIT_MODE=legacy
 python -u src/training/print_best_stats.py \
-    --checkpoint "/net/scc1/scratch/$USER/checkpoints/last_ResNet_fixed_checkpoint.pt" \
+    --checkpoint "/net/scc1/scratch/$USER/checkpoints/last_ResNet_${SPLIT_MODE}_checkpoint.pt" \
     --sleep-seconds $((WALLTIME_SECONDS - WARN_BUFFER_SECONDS)) &
 WATCHDOG_PID=$!
 trap 'kill "$WATCHDOG_PID" 2>/dev/null' EXIT
 
-python -u src/training/train_ResNet.py
+python -u src/training/train_ResNet.py --split-mode "$SPLIT_MODE"

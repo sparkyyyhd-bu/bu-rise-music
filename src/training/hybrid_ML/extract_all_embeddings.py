@@ -156,9 +156,12 @@ def extract_embedding(model_name, model, x):
     raise ValueError(f"unsupported model: {model_name}")
 
 
-def load_model(model_name, device):
+def load_model(model_name, device, split_mode):
     config = MODEL_CONFIGS[model_name]
-    checkpoint_path = CHECKPOINT_DIR / config["checkpoint"]
+    checkpoint_name = config["checkpoint"].replace(
+        "_fixed_model.pt", f"_{split_mode}_model.pt"
+    )
+    checkpoint_path = CHECKPOINT_DIR / checkpoint_name
     checkpoint = torch.load(
         checkpoint_path, map_location="cpu", weights_only=True
     )
@@ -168,7 +171,7 @@ def load_model(model_name, device):
     return model.to(device).eval()
 
 
-def extract_model(model_name, mel_dir, labeled_ids, device):
+def extract_model(model_name, mel_dir, labeled_ids, device, split_mode):
     config = MODEL_CONFIGS[model_name]
     dataset = MelTrackDataset(mel_dir, labeled_ids, config["normalize"])
     loader = DataLoader(
@@ -179,7 +182,7 @@ def extract_model(model_name, mel_dir, labeled_ids, device):
         pin_memory=device.type == "cuda",
         collate_fn=collate_mels(model_name),
     )
-    model = load_model(model_name, device)
+    model = load_model(model_name, device, split_mode)
     track_ids = []
     batches = []
     print(
@@ -208,7 +211,9 @@ def extract_model(model_name, mel_dir, labeled_ids, device):
         raise ValueError(
             f"{model_name} produced {embedding_array.shape}, expected {expected_shape}"
         )
-    output_path = CHECKPOINT_DIR / f"{model_name}_fixed_embeddings.npz"
+    output_path = (
+        CHECKPOINT_DIR / f"{model_name}_{split_mode}_embeddings.npz"
+    )
     np.savez_compressed(
         output_path,
         track_ids=np.asarray(track_ids),
@@ -226,6 +231,12 @@ def extract_model(model_name, mel_dir, labeled_ids, device):
 
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--split-mode",
+        choices=("fixed", "legacy"),
+        default="fixed",
+        help="checkpoint family to extract (default: fixed)",
+    )
     parser.add_argument(
         "--models",
         nargs="+",
@@ -257,7 +268,9 @@ def main():
     )
     CHECKPOINT_DIR.mkdir(parents=True, exist_ok=True)
     for model_name in selected:
-        extract_model(model_name, mel_dir, labeled_ids, device)
+        extract_model(
+            model_name, mel_dir, labeled_ids, device, args.split_mode
+        )
 
 
 if __name__ == "__main__":

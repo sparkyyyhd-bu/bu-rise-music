@@ -21,9 +21,11 @@ from sklearn.neural_network import MLPRegressor
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import LinearSVR, SVR
-from torch.utils.data import random_split
 from xgboost import XGBRegressor
-from training.data_utils import grouped_track_id_split
+from training.data_utils import (
+    canonical_legacy_track_id_split,
+    grouped_track_id_split,
+)
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -105,10 +107,10 @@ EXPERIMENTS = {
         "description": "Fixed embeddings + audio + lyrics + artist stats",
     },
     "legacy_leaky_with_everything": {
-        "embedding_suffix": "",
+        "embedding_suffix": "_legacy",
         "include_artist_stats": True,
         "description": (
-            "Legacy artist/album-leaky embeddings + audio + lyrics + artist stats"
+            "Legacy deterministic-random embeddings + audio + lyrics + artist stats"
         ),
     },
 }
@@ -388,23 +390,6 @@ def parse_args():
     return parser.parse_args()
 
 
-def legacy_track_id_split(track_ids):
-    """Reproduce the original deterministic random 70/15/15 split."""
-    validation_size = max(1, int(0.15 * len(track_ids)))
-    test_size = max(1, int(0.15 * len(track_ids)))
-    train_size = len(track_ids) - validation_size - test_size
-    if train_size < 1:
-        raise ValueError("at least three cached embeddings are required")
-    subsets = random_split(
-        range(len(track_ids)),
-        [train_size, validation_size, test_size],
-        generator=torch.Generator().manual_seed(RANDOM_SEED),
-    )
-    return tuple(
-        [track_ids[index] for index in subset.indices] for subset in subsets
-    )
-
-
 def run_experiment(
     key,
     config,
@@ -538,27 +523,25 @@ def main():
     fixed_ids, fixed_embeddings, fixed_paths, fixed_groups = (
         load_all_embeddings("_fixed")
     )
-    legacy_ids, legacy_embeddings, legacy_paths, legacy_groups = (
-        load_all_embeddings("")
+    _legacy_ids, legacy_embeddings, legacy_paths, legacy_groups = (
+        load_all_embeddings("_legacy")
     )
     tabular, tabular_groups = load_tabular_features()
     fixed_split_ids = grouped_track_id_split(fixed_ids)
-    # Preserve the legacy cache order: it matches the os.scandir order used by
-    # the original neural training split.
-    legacy_split_ids = legacy_track_id_split(legacy_ids)
+    legacy_split_ids = canonical_legacy_track_id_split()
     splits_by_suffix = {
         "_fixed": (
             fixed_split_ids,
             "artist_album_isolated_fixed_70_15_15",
         ),
-        "": (
+        "_legacy": (
             legacy_split_ids,
             "legacy_random_70_15_15",
         ),
     }
     embeddings_by_suffix = {
         "_fixed": (fixed_embeddings, fixed_paths, fixed_groups),
-        "": (legacy_embeddings, legacy_paths, legacy_groups),
+        "_legacy": (legacy_embeddings, legacy_paths, legacy_groups),
     }
     experiments = {}
     for key, config in EXPERIMENTS.items():

@@ -1,4 +1,4 @@
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, Subset, random_split
 import torch
 import pandas as pd
 import ast
@@ -14,6 +14,7 @@ repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__fi
 tracks_csv = os.path.join(repo_root, "data", "SpotGenTrack", "Data Sources", "spotify_tracks.csv")
 FIXED_SPLIT_SEED = 0
 FIXED_SPLIT_FRACTIONS = (0.70, 0.15, 0.15)
+SPLIT_MODES = ("fixed", "legacy")
 
 
 def spec_augment(
@@ -416,6 +417,100 @@ def grouped_track_id_split(track_ids, **kwargs):
         [source.track_ids[index] for index in subset.indices]
         for subset in subsets
     )
+
+
+def legacy_track_id_split(
+    track_ids,
+    fractions=FIXED_SPLIT_FRACTIONS,
+    seed=FIXED_SPLIT_SEED,
+):
+    """Return legacy deterministic-random split membership as track-ID lists."""
+    ids = list(track_ids)
+    subsets = deterministic_random_train_val_test_split(
+        _TrackIdDataset(ids), fractions=fractions, seed=seed
+    )
+    return tuple(
+        [ids[index] for index in subset.indices] for subset in subsets
+    )
+
+
+def canonical_legacy_track_id_split(metadata_csv=tracks_csv):
+    """Split the sorted labeled Spotify track IDs for all legacy models."""
+    metadata = pd.read_csv(
+        metadata_csv, usecols=["id", "popularity"], dtype={"id": str}
+    ).dropna(subset=["id", "popularity"])
+    track_ids = sorted(metadata["id"].drop_duplicates().tolist())
+    return legacy_track_id_split(track_ids)
+
+
+class _TrackIdDataset:
+    def __init__(self, track_ids):
+        self.track_ids = list(track_ids)
+
+    def __len__(self):
+        return len(self.track_ids)
+
+
+def deterministic_random_train_val_test_split(
+    dataset,
+    fractions=FIXED_SPLIT_FRACTIONS,
+    seed=FIXED_SPLIT_SEED,
+):
+    """Return the reproducible random split used by legacy-mode training."""
+    if len(fractions) != 3 or any(fraction <= 0 for fraction in fractions):
+        raise ValueError("fractions must contain three positive values")
+    total_fraction = sum(fractions)
+    fractions = tuple(fraction / total_fraction for fraction in fractions)
+    validation_size = max(1, int(fractions[1] * len(dataset)))
+    test_size = max(1, int(fractions[2] * len(dataset)))
+    train_size = len(dataset) - validation_size - test_size
+    if train_size < 1:
+        raise RuntimeError("need at least three tracks for a train/validation/test split")
+    subsets = random_split(
+        dataset,
+        [train_size, validation_size, test_size],
+        generator=torch.Generator().manual_seed(seed),
+    )
+    print(
+        "legacy deterministic random split "
+        f"train={train_size}, validation={validation_size}, test={test_size}"
+    )
+    return subsets
+
+
+def train_val_test_split(dataset, mode="fixed"):
+    """Dispatch to the fixed grouped split or deterministic legacy split."""
+    if mode == "fixed":
+        return grouped_train_val_test_split(dataset)
+    if mode == "legacy":
+        if not hasattr(dataset, "track_ids"):
+            raise ValueError("legacy split requires dataset.track_ids")
+        split_ids = tuple(map(set, canonical_legacy_track_id_split()))
+        indices_by_id = {
+            track_id: index
+            for index, track_id in enumerate(dataset.track_ids)
+        }
+        subsets = tuple(
+            Subset(
+                dataset,
+                [
+                    indices_by_id[track_id]
+                    for track_id in sorted(ids & indices_by_id.keys())
+                ],
+            )
+            for ids in split_ids
+        )
+        print(
+            "legacy CSV-anchored split "
+            + ", ".join(
+                f"{name}={len(subset)}"
+                for name, subset in zip(
+                    ("train", "validation", "test"), subsets
+                )
+            )
+        )
+        return subsets
+    raise ValueError(f"unknown split mode {mode!r}; choose from {', '.join(SPLIT_MODES)}")
     
 def load_popularity_by_id():
     df = pd.read_csv(tracks_csv, usecols=["id", "popularity"])

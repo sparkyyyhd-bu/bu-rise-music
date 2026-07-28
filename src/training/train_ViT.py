@@ -1,3 +1,4 @@
+import argparse
 import os
 
 import torch
@@ -13,9 +14,9 @@ from training.data_utils import (
     MelPopularityDataset,
     augment_vit_mels,
     checkpoint_matches_model,
-    grouped_train_val_test_split,
     load_popularity_by_id,
     sync_to_local_scratch,
+    train_val_test_split,
 )
 
 
@@ -205,6 +206,10 @@ def run_epoch(
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--split-mode", choices=("fixed", "legacy"), default="fixed")
+    args = parser.parse_args()
+    split_mode = args.split_mode
     torch.manual_seed(0)
 
     network_mel_dir = os.path.join(
@@ -219,7 +224,7 @@ def main():
 
     dataset = MelPopularityDataset(mel_dir, load_popularity_by_id())
     print(f"loaded {len(dataset)} labeled mel spectrograms")
-    train_set, val_set, _ = grouped_train_val_test_split(dataset)
+    train_set, val_set, _ = train_val_test_split(dataset, split_mode)
 
     batch_size = 12
     accumulation_steps = 4
@@ -282,10 +287,10 @@ def main():
         "fine_tune_encoder": True,
     }
     last_checkpoint_path = os.path.join(
-        checkpoint_dir, "last_ViT_fixed_checkpoint.pt"
+        checkpoint_dir, f"last_ViT_{split_mode}_checkpoint.pt"
     )
     best_checkpoint_path = os.path.join(
-        checkpoint_dir, "best_ViT_fixed_model.pt"
+        checkpoint_dir, f"best_ViT_{split_mode}_model.pt"
     )
     start_epoch = 0
     best_val_loss = float("inf")
@@ -360,6 +365,7 @@ def main():
 
         checkpoint = {
             "epoch": epoch,
+            "split_mode": split_mode,
             "model_state_dict": model.state_dict(),
             "optimizer_state_dict": optimizer.state_dict(),
             "scheduler_state_dict": scheduler.state_dict(),
