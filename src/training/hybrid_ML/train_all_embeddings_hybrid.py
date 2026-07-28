@@ -1,4 +1,4 @@
-"""Compare hybrid regressors using every best-model embedding plus audio features."""
+"""Compare fixed and legacy hybrid regressors on their matching held-out splits."""
 
 import argparse
 import json
@@ -21,6 +21,7 @@ from sklearn.neural_network import MLPRegressor
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import LinearSVR, SVR
+from torch.utils.data import random_split
 from xgboost import XGBRegressor
 from training.data_utils import grouped_track_id_split
 
@@ -28,7 +29,7 @@ from training.data_utils import grouped_track_id_split
 REPO_ROOT = Path(__file__).resolve().parents[3]
 USER = os.environ["USER"]
 CHECKPOINT_DIR = Path("/net/scc1/scratch") / USER / "checkpoints"
-OUTPUT_PATH = CHECKPOINT_DIR / "best_all_embeddings_hybrid_fixed_model.joblib"
+OUTPUT_PATH = CHECKPOINT_DIR / "all_embeddings_hybrid_comparison.joblib"
 TRACKS_CSV = (
     REPO_ROOT
     / "data"
@@ -42,6 +43,20 @@ LOW_LEVEL_CSV = (
     / "SpotGenTrack"
     / "Features Extracted"
     / "low_level_audio_features.csv"
+)
+LYRICS_CSV = (
+    REPO_ROOT
+    / "data"
+    / "SpotGenTrack"
+    / "Features Extracted"
+    / "lyrics_features.csv"
+)
+ARTISTS_CSV = (
+    REPO_ROOT
+    / "data"
+    / "SpotGenTrack"
+    / "Data Sources"
+    / "spotify_artists.csv"
 )
 RANDOM_SEED = 0
 N_TREES = 500
@@ -77,10 +92,30 @@ SPOTIFY_AUDIO_FEATURES = [
     "time_signature",
     "valence",
 ]
+ARTIST_STAT_FEATURES = ["artist_popularity", "followers"]
+EXPERIMENTS = {
+    "fixed_without_artist_stats": {
+        "embedding_suffix": "_fixed",
+        "include_artist_stats": False,
+        "description": "Fixed embeddings + audio + lyrics (no artist stats)",
+    },
+    "fixed_with_everything": {
+        "embedding_suffix": "_fixed",
+        "include_artist_stats": True,
+        "description": "Fixed embeddings + audio + lyrics + artist stats",
+    },
+    "legacy_leaky_with_everything": {
+        "embedding_suffix": "",
+        "include_artist_stats": True,
+        "description": (
+            "Legacy artist/album-leaky embeddings + audio + lyrics + artist stats"
+        ),
+    },
+}
 
 
-def load_embeddings(model_name, expected_dimensions):
-    path = CHECKPOINT_DIR / f"{model_name}_fixed_embeddings.npz"
+def load_embeddings(model_name, expected_dimensions, embedding_suffix):
+    path = CHECKPOINT_DIR / f"{model_name}{embedding_suffix}_embeddings.npz"
     with np.load(path, allow_pickle=False) as cache:
         track_ids = cache["track_ids"].astype(str)
         embeddings = cache["embeddings"].astype(np.float32, copy=False)
@@ -101,14 +136,14 @@ def load_embeddings(model_name, expected_dimensions):
     return path, track_ids, frame, feature_names
 
 
-def load_all_embeddings():
+def load_all_embeddings(embedding_suffix):
     embedding_frame = None
     paths = {}
     groups = {}
     split_track_ids = None
     for model_name, dimensions in EMBEDDING_DIMENSIONS.items():
         path, track_ids, frame, feature_names = load_embeddings(
-            model_name, dimensions
+            model_name, dimensions, embedding_suffix
         )
         paths[model_name] = str(path)
         groups[model_name] = feature_names
@@ -126,7 +161,28 @@ def load_all_embeddings():
     return split_track_ids, embedding_frame, paths, groups
 
 
-def load_audio_features():
+def numeric_feature_frame(path, id_column, prefix):
+    frame = pd.read_csv(path)
+    frame = frame.drop(
+        columns=[
+            column
+            for column in frame.columns
+            if column.startswith("Unnamed:")
+        ],
+        errors="ignore",
+    ).rename(columns={id_column: "id"})
+    frame["id"] = frame["id"].astype(str)
+    feature_names = [
+        column
+        for column in frame.columns
+        if column != "id" and pd.api.types.is_numeric_dtype(frame[column])
+    ]
+    rename = {name: f"{prefix}{name}" for name in feature_names}
+    frame = frame[["id", *feature_names]].rename(columns=rename)
+    return frame, list(rename.values())
+
+
+def load_tabular_features():
     tracks = pd.read_csv(
         TRACKS_CSV,
         usecols=["id", "popularity", *SPOTIFY_AUDIO_FEATURES],
@@ -134,29 +190,40 @@ def load_audio_features():
     tracks["id"] = tracks["id"].astype(str)
     tracks = tracks.dropna(subset=["id", "popularity"]).drop_duplicates("id")
 
-    low_level = pd.read_csv(LOW_LEVEL_CSV)
-    low_level = low_level.drop(
-        columns=[
-            column
-            for column in low_level.columns
-            if column.startswith("Unnamed:")
-        ],
-        errors="ignore",
-    ).rename(columns={"track_id": "id"})
-    low_level["id"] = low_level["id"].astype(str)
+    low_level, low_level_names = numeric_feature_frame(
+        LOW_LEVEL_CSV, "track_id", "low_level_"
+    )
     low_level = low_level.drop_duplicates("id")
-    low_level_names = [
-        column
-        for column in low_level.columns
-        if column != "id" and pd.api.types.is_numeric_dtype(low_level[column])
-    ]
     tracks = tracks.merge(
         low_level[["id", *low_level_names]],
         on="id",
         how="inner",
         validate="one_to_one",
     )
-    return tracks, [*SPOTIFY_AUDIO_FEATURES, *low_level_names]
+
+    lyrics, lyric_names = numeric_feature_frame(
+        LYRICS_CSV, "track_id", "lyrics_"
+    )
+    lyrics = lyrics.drop_duplicates("id")
+    tracks = tracks.merge(lyrics, on="id", how="inner", validate="one_to_one")
+
+    artists = pd.read_csv(
+        ARTISTS_CSV, usecols=["track_id", *ARTIST_STAT_FEATURES]
+    ).rename(columns={"track_id": "id"})
+    artists["id"] = artists["id"].astype(str)
+    artist_names = [f"artist_{name}" for name in ARTIST_STAT_FEATURES]
+    artists = (
+        artists.groupby("id", as_index=False)[ARTIST_STAT_FEATURES]
+        .mean()
+        .rename(columns=dict(zip(ARTIST_STAT_FEATURES, artist_names)))
+    )
+    tracks = tracks.merge(artists, on="id", how="inner", validate="one_to_one")
+    feature_groups = {
+        "audio": [*SPOTIFY_AUDIO_FEATURES, *low_level_names],
+        "lyrics": lyric_names,
+        "artist_stats": artist_names,
+    }
+    return tracks, feature_groups
 
 
 def scaled_pipeline(regressor):
@@ -321,6 +388,135 @@ def parse_args():
     return parser.parse_args()
 
 
+def legacy_track_id_split(track_ids):
+    """Reproduce the original deterministic random 70/15/15 split."""
+    validation_size = max(1, int(0.15 * len(track_ids)))
+    test_size = max(1, int(0.15 * len(track_ids)))
+    train_size = len(track_ids) - validation_size - test_size
+    if train_size < 1:
+        raise ValueError("at least three cached embeddings are required")
+    subsets = random_split(
+        range(len(track_ids)),
+        [train_size, validation_size, test_size],
+        generator=torch.Generator().manual_seed(RANDOM_SEED),
+    )
+    return tuple(
+        [track_ids[index] for index in subset.indices] for subset in subsets
+    )
+
+
+def run_experiment(
+    key,
+    config,
+    split_name,
+    combined,
+    embedding_groups,
+    embedding_paths,
+    tabular_groups,
+    split_ids,
+    model_templates,
+    selected_models,
+):
+    train_ids, validation_ids, test_ids = map(set, split_ids)
+    partitions = {
+        "train": combined.loc[combined.index.isin(train_ids)],
+        "validation": combined.loc[combined.index.isin(validation_ids)],
+        "test": combined.loc[combined.index.isin(test_ids)],
+    }
+    if any(frame.empty for frame in partitions.values()):
+        raise ValueError(f"{key} has an empty data partition")
+
+    tabular_feature_names = [
+        *tabular_groups["audio"],
+        *tabular_groups["lyrics"],
+    ]
+    if config["include_artist_stats"]:
+        tabular_feature_names.extend(tabular_groups["artist_stats"])
+    feature_names = [
+        *(
+            feature
+            for model_name in EMBEDDING_DIMENSIONS
+            for feature in embedding_groups[model_name]
+        ),
+        *tabular_feature_names,
+    ]
+    print(f"\n{'=' * 78}\n{config['description']}", flush=True)
+    print(
+        f"split={split_name}; features={len(feature_names)}; "
+        + ", ".join(
+            f"{name}={len(frame)}" for name, frame in partitions.items()
+        ),
+        flush=True,
+    )
+
+    x = {name: frame[feature_names] for name, frame in partitions.items()}
+    y = {name: frame["popularity"] for name, frame in partitions.items()}
+    rng = np.random.default_rng(RANDOM_SEED)
+    results = {}
+    fitted_models = {}
+    for name in selected_models:
+        estimator, sample_cap = model_templates[name]
+        model = clone(estimator)
+        if sample_cap is not None and len(x["train"]) > sample_cap:
+            positions = np.sort(
+                rng.choice(len(x["train"]), size=sample_cap, replace=False)
+            )
+            fit_x = x["train"].iloc[positions]
+            fit_y = y["train"].iloc[positions]
+        else:
+            fit_x, fit_y = x["train"], y["train"]
+        print(f"\ntraining {name} on {len(fit_x)} samples...", flush=True)
+        start = time.perf_counter()
+        model.fit(fit_x, fit_y)
+        results[name] = {
+            "fit_samples": len(fit_x),
+            "fit_seconds": time.perf_counter() - start,
+            "train": evaluate(model, fit_x, fit_y, f"{name} train"),
+            "validation": evaluate(
+                model, x["validation"], y["validation"], f"{name} validation"
+            ),
+            "test": evaluate(model, x["test"], y["test"], f"{name} test"),
+        }
+        fitted_models[name] = model
+
+    leaderboard = sorted(
+        results, key=lambda name: results[name]["validation"]["rmse"]
+    )
+    best_name = leaderboard[0]
+    print(f"\n{config['description']} leaderboard:", flush=True)
+    for rank, name in enumerate(leaderboard, start=1):
+        validation = results[name]["validation"]
+        test = results[name]["test"]
+        print(
+            f"{rank:2d}. {name:18s} "
+            f"validation RMSE {validation['rmse']:.3f} | "
+            f"test RMSE {test['rmse']:.3f}, MAE {test['mae']:.3f}, "
+            f"R2 {test['r2']:.3f}",
+            flush=True,
+        )
+
+    importances = {}
+    if "xgboost" in fitted_models:
+        importances = grouped_feature_importance(
+            fitted_models["xgboost"], feature_names, embedding_groups
+        )
+    return {
+        "description": config["description"],
+        "split": split_name,
+        "split_counts": {
+            name: len(frame) for name, frame in partitions.items()
+        },
+        "model": fitted_models[best_name],
+        "model_name": best_name,
+        "feature_names": feature_names,
+        "embedding_feature_names": embedding_groups,
+        "tabular_feature_names": tabular_feature_names,
+        "embedding_paths": embedding_paths,
+        "grouped_feature_importance": importances,
+        "results": results,
+    }
+
+
 def main():
     args = parse_args()
     np.random.seed(RANDOM_SEED)
@@ -339,107 +535,55 @@ def main():
             f"{', '.join(available_models)}"
         )
 
-    split_track_ids, embeddings, embedding_paths, embedding_groups = (
-        load_all_embeddings()
+    fixed_ids, fixed_embeddings, fixed_paths, fixed_groups = (
+        load_all_embeddings("_fixed")
     )
-    tabular, audio_feature_names = load_audio_features()
-    combined = embeddings.merge(
-        tabular, on="id", how="inner", validate="one_to_one"
-    ).set_index("id")
-
-    train_track_ids, validation_track_ids, _ = grouped_track_id_split(
-        split_track_ids
+    legacy_ids, legacy_embeddings, legacy_paths, legacy_groups = (
+        load_all_embeddings("")
     )
-    train_ids = set(train_track_ids)
-    validation_ids = set(validation_track_ids)
-    train = combined.loc[combined.index.isin(train_ids)]
-    validation = combined.loc[combined.index.isin(validation_ids)]
-    if train.empty or validation.empty:
-        raise ValueError("no cached IDs overlap the tabular audio features")
-
-    feature_names = [
-        *(
-            name
-            for model_name in EMBEDDING_DIMENSIONS
-            for name in embedding_groups[model_name]
+    tabular, tabular_groups = load_tabular_features()
+    fixed_split_ids = grouped_track_id_split(fixed_ids)
+    # Preserve the legacy cache order: it matches the os.scandir order used by
+    # the original neural training split.
+    legacy_split_ids = legacy_track_id_split(legacy_ids)
+    splits_by_suffix = {
+        "_fixed": (
+            fixed_split_ids,
+            "artist_album_isolated_fixed_70_15_15",
         ),
-        *audio_feature_names,
-    ]
-    x_train = train[feature_names]
-    y_train = train["popularity"]
-    x_validation = validation[feature_names]
-    y_validation = validation["popularity"]
-    print(
-        f"matched {len(train)} training and {len(validation)} validation tracks; "
-        f"using {len(feature_names)} features from {len(embedding_groups)} "
-        "embeddings and audio metadata",
-        flush=True,
-    )
-    rng = np.random.default_rng(RANDOM_SEED)
-    results = {}
-    fitted_models = {}
-    for name in args.models:
-        estimator, sample_cap = available_models[name]
-        model = clone(estimator)
-        if sample_cap is not None and len(x_train) > sample_cap:
-            positions = np.sort(
-                rng.choice(len(x_train), size=sample_cap, replace=False)
-            )
-            fit_x = x_train.iloc[positions]
-            fit_y = y_train.iloc[positions]
-        else:
-            fit_x, fit_y = x_train, y_train
-        print(f"\ntraining {name} on {len(fit_x)} samples...", flush=True)
-        start = time.perf_counter()
-        model.fit(fit_x, fit_y)
-        results[name] = {
-            "fit_samples": len(fit_x),
-            "fit_seconds": time.perf_counter() - start,
-            "train": evaluate(model, fit_x, fit_y, f"{name} train"),
-            "validation": evaluate(
-                model, x_validation, y_validation, f"{name} validation"
-            ),
-        }
-        fitted_models[name] = model
-
-    leaderboard = sorted(
-        results, key=lambda name: results[name]["validation"]["rmse"]
-    )
-    best_name = leaderboard[0]
-    best_model = fitted_models[best_name]
-    print("\nValidation leaderboard (lower RMSE is better):", flush=True)
-    for rank, name in enumerate(leaderboard, start=1):
-        metrics = results[name]["validation"]
-        print(
-            f"{rank:2d}. {name:24s} RMSE {metrics['rmse']:.3f} | "
-            f"MAE {metrics['mae']:.3f} | R2 {metrics['r2']:.3f}",
-            flush=True,
+        "": (
+            legacy_split_ids,
+            "legacy_random_70_15_15",
+        ),
+    }
+    embeddings_by_suffix = {
+        "_fixed": (fixed_embeddings, fixed_paths, fixed_groups),
+        "": (legacy_embeddings, legacy_paths, legacy_groups),
+    }
+    experiments = {}
+    for key, config in EXPERIMENTS.items():
+        embeddings, paths, groups = embeddings_by_suffix[
+            config["embedding_suffix"]
+        ]
+        split_ids, split_name = splits_by_suffix[config["embedding_suffix"]]
+        combined = embeddings.merge(
+            tabular, on="id", how="inner", validate="one_to_one"
+        ).set_index("id")
+        experiments[key] = run_experiment(
+            key,
+            config,
+            split_name,
+            combined,
+            groups,
+            paths,
+            tabular_groups,
+            split_ids,
+            available_models,
+            args.models,
         )
-
-    if "xgboost" not in fitted_models:
-        raise ValueError(
-            "xgboost must be included in --models to calculate feature importance"
-        )
-    importances = grouped_feature_importance(
-        fitted_models["xgboost"], feature_names, embedding_groups
-    )
-
-    print("\nGrouped XGBoost feature importance:", flush=True)
-    for rank, (name, importance) in enumerate(importances.items(), start=1):
-        print(f"{rank:3d}. {name:32s} {importance:.6f}", flush=True)
-
     artifact = {
-        "model": best_model,
-        "model_name": best_name,
-        "feature_names": feature_names,
-        "embedding_feature_names": embedding_groups,
-        "audio_feature_names": audio_feature_names,
-        "embedding_paths": embedding_paths,
-        "grouped_feature_importance": importances,
-        "split": "artist_album_isolated_fixed_70_15_15",
+        "experiments": experiments,
         "random_seed": RANDOM_SEED,
-        "results": results,
-        "feature_importance_model": "xgboost",
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     joblib.dump(artifact, args.output)
@@ -447,10 +591,14 @@ def main():
     metrics_path.write_text(
         json.dumps(
             {
-                "best_model": best_name,
-                "models": results,
-                "feature_importance_model": "xgboost",
-                "grouped_feature_importance": importances,
+                "experiments": {
+                    key: {
+                        field: value
+                        for field, value in experiment.items()
+                        if field != "model"
+                    }
+                    for key, experiment in experiments.items()
+                },
             },
             indent=2,
         )
@@ -458,10 +606,14 @@ def main():
         encoding="utf-8",
     )
     importance_path = args.output.with_suffix(".feature_importance.csv")
+    importance_rows = [
+        (key, feature, importance)
+        for key, experiment in experiments.items()
+        for feature, importance in experiment["grouped_feature_importance"].items()
+    ]
     pd.DataFrame(
-        importances.items(), columns=["feature", "importance"]
+        importance_rows, columns=["experiment", "feature", "importance"]
     ).to_csv(importance_path, index=False)
-    print(f"\nbest model: {best_name}", flush=True)
     print(f"saved model to {args.output}", flush=True)
     print(f"saved metrics to {metrics_path}", flush=True)
     print(f"saved grouped feature importance to {importance_path}", flush=True)

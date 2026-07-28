@@ -1,8 +1,8 @@
 #!/bin/bash -l
 
 #$ -P rise-grid
-#$ -N train_all_embeddings_hybrid_fixed
-#$ -l h_rt=04:00:00
+#$ -N train_all_embeddings_hybrid_comparison
+#$ -l h_rt=12:00:00
 #$ -pe omp 8
 #$ -l gpus=1
 #$ -l gpu_c=8.0
@@ -16,8 +16,8 @@ REPO_DIR="${REPO_DIR:-$PROJECT_STORAGE/bu-rise-music}"
 cd "$REPO_DIR"
 
 mkdir -p "$REPO_DIR/logs"
-exec >>"$REPO_DIR/logs/train_all_embeddings_hybrid_fixed.${JOB_ID}.qlog" \
-     2>>"$REPO_DIR/logs/train_all_embeddings_hybrid_fixed.${JOB_ID}.err"
+exec >>"$REPO_DIR/logs/train_all_embeddings_hybrid_comparison.${JOB_ID}.qlog" \
+     2>>"$REPO_DIR/logs/train_all_embeddings_hybrid_comparison.${JOB_ID}.err"
 echo "job ${JOB_ID} started on $(hostname) at $(date)"
 
 VENV_DIR="$PROJECT_STORAGE/venvs/bu-rise-train"
