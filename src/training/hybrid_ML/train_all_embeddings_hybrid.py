@@ -207,7 +207,9 @@ def load_tabular_features():
         LYRICS_CSV, "track_id", "lyrics_"
     )
     lyrics = lyrics.drop_duplicates("id")
-    tracks = tracks.merge(lyrics, on="id", how="inner", validate="one_to_one")
+    # Keep tracks without extracted lyrics. The model pipelines median-impute
+    # missing numeric lyric features instead of discarding those tracks.
+    tracks = tracks.merge(lyrics, on="id", how="left", validate="one_to_one")
 
     artists = pd.read_csv(
         ARTISTS_CSV, usecols=["track_id", *ARTIST_STAT_FEATURES]
@@ -219,7 +221,11 @@ def load_tabular_features():
         .mean()
         .rename(columns=dict(zip(ARTIST_STAT_FEATURES, artist_names)))
     )
-    tracks = tracks.merge(artists, on="id", how="inner", validate="one_to_one")
+    # Artist statistics are optional inputs. Do not discard an otherwise usable
+    # track just because spotify_artists.csv has no matching row. Experiments
+    # that include these columns use the pipeline's median imputer for missing
+    # values; experiments without artist stats never select the columns.
+    tracks = tracks.merge(artists, on="id", how="left", validate="one_to_one")
     feature_groups = {
         "audio": [*SPOTIFY_AUDIO_FEATURES, *low_level_names],
         "lyrics": lyric_names,
