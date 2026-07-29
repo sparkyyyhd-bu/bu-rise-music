@@ -1,9 +1,10 @@
-"""Train a fixed ViT-linear-layer-plus-lyrics Random Forest stack.
+"""Compare lyrics RF, ViT Ridge, and their stacked combination.
 
 A Ridge linear layer first reduces the fixed ViT embedding to one supervised
 feature. The Random Forest receives that feature plus the lyrics features.
 Out-of-fold linear predictions are used to train the forest, preventing target
-leakage between the two stages.
+leakage between the two stages. All three models use the same fixed population
+and artist/album-isolated train, validation, and test partitions.
 """
 
 import argparse
@@ -34,7 +35,7 @@ from training.hybrid_ML.search_fixed_no_artist_xgboost import (
 )
 
 
-DEFAULT_OUTPUT = CHECKPOINT_DIR / "fixed_vit_lyrics_random_forest.joblib"
+DEFAULT_OUTPUT = CHECKPOINT_DIR / "fixed_vit_lyrics_model_comparison.joblib"
 MODEL_PARAMETERS = {
     "n_estimators": 500,
     "min_samples_split": 2,
@@ -124,7 +125,14 @@ def main():
     y = {name: frame["popularity"] for name, frame in partitions.items()}
 
     linear_model = scaled_pipeline(Ridge(alpha=LINEAR_ALPHA))
-    forest_model = tree_pipeline(
+    lyrics_forest = tree_pipeline(
+        RandomForestRegressor(
+            **MODEL_PARAMETERS,
+            n_jobs=-1,
+            random_state=RANDOM_SEED,
+        )
+    )
+    combined_forest = tree_pipeline(
         RandomForestRegressor(
             **MODEL_PARAMETERS,
             n_jobs=-1,
@@ -132,19 +140,14 @@ def main():
         )
     )
 
-    print(
-        f"training fixed ViT linear layer + lyrics Random Forest on "
-        f"{len(x['train'])} tracks "
-        f"with {len(embedding_features)} ViT and "
-        f"{len(tabular_groups['lyrics'])} lyrics features",
-        flush=True,
-    )
+    print(f"training three models on {len(x['train'])} tracks", flush=True)
     print(
         f"creating {STACKING_FOLDS}-fold artist/album-grouped "
         "out-of-fold ViT linear predictions",
         flush=True,
     )
     print(f"parameters: {MODEL_PARAMETERS}", flush=True)
+    fit_seconds = {}
     started = time.perf_counter()
     train_groups = artist_album_groups(x["train"].index)
     oof_linear_predictions = cross_val_predict(
@@ -157,26 +160,61 @@ def main():
         n_jobs=1,
     )
     linear_model.fit(x["train"][embedding_features], y["train"])
-    forest_train_x = stacked_features(
+    fit_seconds["vit_ridge"] = time.perf_counter() - started
+
+    started = time.perf_counter()
+    lyrics_forest.fit(
+        x["train"][tabular_groups["lyrics"]], y["train"]
+    )
+    fit_seconds["lyrics_random_forest"] = time.perf_counter() - started
+
+    combined_train_x = stacked_features(
         x["train"], oof_linear_predictions, tabular_groups["lyrics"]
     )
-    forest_model.fit(forest_train_x, y["train"])
-    model = ViTLinearLyricsRandomForest(
+    started = time.perf_counter()
+    combined_forest.fit(combined_train_x, y["train"])
+    fit_seconds["combined_stack"] = time.perf_counter() - started
+    combined_model = ViTLinearLyricsRandomForest(
         linear_model,
-        forest_model,
+        combined_forest,
         embedding_features,
         tabular_groups["lyrics"],
     )
-    fit_seconds = time.perf_counter() - started
     metrics = {
-        split: evaluate(model, x[split], y[split], f"random forest {split}")
-        for split in ("train", "validation", "test")
+        "vit_ridge": {
+            split: evaluate(
+                linear_model,
+                x[split][embedding_features],
+                y[split],
+                f"ViT Ridge {split}",
+            )
+            for split in ("train", "validation", "test")
+        },
+        "lyrics_random_forest": {
+            split: evaluate(
+                lyrics_forest,
+                x[split][tabular_groups["lyrics"]],
+                y[split],
+                f"lyrics Random Forest {split}",
+            )
+            for split in ("train", "validation", "test")
+        },
+        "combined_stack": {
+            split: evaluate(
+                combined_model,
+                x[split],
+                y[split],
+                f"combined stack {split}",
+            )
+            for split in ("train", "validation", "test")
+        },
     }
 
     artifact = {
-        "model": {
+        "models": {
             "linear_model": linear_model,
-            "random_forest": forest_model,
+            "lyrics_random_forest": lyrics_forest,
+            "combined_random_forest": combined_forest,
         },
         "linear_model": "Ridge",
         "linear_alpha": LINEAR_ALPHA,
@@ -204,7 +242,11 @@ def main():
     metrics_path = args.output.with_suffix(".metrics.json")
     metrics_path.write_text(
         json.dumps(
-            {key: value for key, value in artifact.items() if key != "model"},
+            {
+                key: value
+                for key, value in artifact.items()
+                if key != "models"
+            },
             indent=2,
         )
         + "\n",

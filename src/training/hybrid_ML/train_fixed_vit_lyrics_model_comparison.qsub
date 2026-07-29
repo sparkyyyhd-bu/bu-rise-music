@@ -1,7 +1,7 @@
 #!/bin/bash -l
 
 #$ -P rise-grid
-#$ -N train_fixed_vit_lyrics_random_forest
+#$ -N train_fixed_vit_lyrics_model_comparison
 #$ -l h_rt=06:00:00
 #$ -pe omp 8
 
@@ -12,8 +12,8 @@ REPO_DIR="${REPO_DIR:-$PROJECT_STORAGE/bu-rise-music}"
 cd "$REPO_DIR"
 
 mkdir -p "$REPO_DIR/logs"
-exec >>"$REPO_DIR/logs/train_fixed_vit_lyrics_random_forest.${JOB_ID}.qlog" \
-     2>>"$REPO_DIR/logs/train_fixed_vit_lyrics_random_forest.${JOB_ID}.err"
+exec >>"$REPO_DIR/logs/train_fixed_vit_lyrics_model_comparison.${JOB_ID}.qlog" \
+     2>>"$REPO_DIR/logs/train_fixed_vit_lyrics_model_comparison.${JOB_ID}.err"
 echo "job ${JOB_ID} started on $(hostname) at $(date)"
 
 VENV_DIR="$PROJECT_STORAGE/venvs/bu-rise-train"
@@ -28,4 +28,4 @@ pip install --upgrade -r requirements.txt
 
 export PYTHONPATH="$REPO_DIR/src:$PYTHONPATH"
 
-python -u src/training/hybrid_ML/train_fixed_vit_lyrics_random_forest.py
+python -u src/training/hybrid_ML/train_fixed_vit_lyrics_model_comparison.py
