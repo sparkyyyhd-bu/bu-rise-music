@@ -2,7 +2,7 @@
 
 #$ -P rise-grid
 #$ -N train_fixed_vit_lyrics_model_comparison
-#$ -l h_rt=06:00:00
+#$ -l h_rt=00:10:00
 #$ -pe omp 8
 
 module load python3/3.10.12
