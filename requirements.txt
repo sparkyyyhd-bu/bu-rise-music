@@ -10,3 +10,4 @@ tqdm
 scikit-learn
 joblib
 xgboost
+langdetect

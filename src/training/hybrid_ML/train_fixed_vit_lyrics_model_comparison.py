@@ -1,13 +1,14 @@
-"""Compare lyrics RF, the trained ViT head, and their combination.
+"""Compare lyrics RF, the trained ViT head, and a convex blend.
 
 The original fixed ViT checkpoint's trained Linear + sigmoid head reduces each
-cached ViT embedding to its popularity prediction. The combined Random Forest
-receives that prediction plus the lyrics features. All three models use the
-same fixed population and artist/album-isolated partitions.
+cached ViT embedding to its popularity prediction. A single convex-blend weight
+is selected on validation RMSE and then evaluated once on the untouched test
+partition. All models use the same fixed population and splits.
 """
 
 import argparse
 import json
+import re
 import time
 from pathlib import Path
 
@@ -15,7 +16,9 @@ import joblib
 import numpy as np
 import pandas as pd
 import torch
+from langdetect import DetectorFactory, detect
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 from training.data_utils import grouped_track_id_split
 from training.hybrid_ML.train_all_embeddings_hybrid import (
@@ -26,7 +29,6 @@ from training.hybrid_ML.train_all_embeddings_hybrid import (
     TRACKS_CSV,
     evaluate,
     load_embeddings,
-    numeric_feature_frame,
     tree_pipeline,
 )
 
@@ -40,14 +42,113 @@ MODEL_PARAMETERS = {
     "max_depth": 35,
     "bootstrap": True,
 }
+RF_RANDOM_SEED = 42
 VIT_CHECKPOINT = CHECKPOINT_DIR / "best_ViT_fixed_model.pt"
-VIT_HEAD_FEATURE = "vit_checkpoint_prediction"
+LYRIC_FEATURES = [
+    "mean_syllables_word",
+    "mean_words_sentence",
+    "n_sentences",
+    "n_words",
+    "sentence_similarity",
+    "vocabulary_wealth",
+    "word_density",
+    "is_english",
+    "repetition_score",
+    "avg_word_length",
+    "syllables_per_line",
+    "syllables_per_word",
+]
 
 
-def stacked_features(frame, vit_predictions, lyric_features):
-    features = frame[lyric_features].copy()
-    features.insert(0, VIT_HEAD_FEATURE, np.asarray(vit_predictions))
-    return features
+def clean_lyric_text(value):
+    if pd.isna(value) or not isinstance(value, str):
+        return ""
+    return re.sub(r"\s+", " ", re.sub(r"[\r\n]+", " ", value)).strip()
+
+
+def lyric_language(value):
+    try:
+        if len(str(value).strip()) < 10:
+            return "unknown"
+        return detect(value)
+    except Exception:
+        return "unknown"
+
+
+def repetition_score(value):
+    words = str(value).lower().split()
+    if not words:
+        return 0.0
+    return 1.0 - len(set(words)) / len(words)
+
+
+def average_word_length(value):
+    words = str(value).split()
+    if not words:
+        return 0.0
+    return sum(map(len, words)) / len(words)
+
+
+def syllable_features(value):
+    lines = [line.strip() for line in str(value).split("\n") if line.strip()]
+    if not lines:
+        return 0.0, 0.0
+
+    def count_syllables(word):
+        return max(1, len(re.findall(r"[aeiouy]+", word.lower())))
+
+    line_syllables = []
+    total_words = 0
+    total_syllables = 0
+    for line in lines:
+        words = re.findall(r"\b\w+\b", line.lower())
+        syllables = sum(count_syllables(word) for word in words)
+        line_syllables.append(syllables)
+        total_words += len(words)
+        total_syllables += syllables
+    return (
+        float(np.mean(line_syllables)),
+        total_syllables / total_words if total_words else 0.0,
+    )
+
+
+def load_notebook_lyrics_features():
+    """Reproduce the 12-feature population from popularity_predictor2."""
+    tracks = pd.read_csv(
+        TRACKS_CSV,
+        usecols=["id", "popularity", "lyrics"],
+        dtype={"id": str},
+    ).dropna(subset=["id", "popularity"])
+    tracks = tracks.drop_duplicates("id")
+    tracks["lyrics"] = tracks["lyrics"].apply(clean_lyric_text)
+
+    lyrics = pd.read_csv(LYRICS_CSV)
+    lyrics = lyrics.drop(
+        columns=[
+            column
+            for column in lyrics.columns
+            if column.startswith("Unnamed:")
+        ],
+        errors="ignore",
+    ).rename(columns={"track_id": "id"})
+    lyrics["id"] = lyrics["id"].astype(str)
+    lyrics = lyrics.loc[lyrics["mean_syllables_word"].ne(-1)].drop_duplicates(
+        "id"
+    )
+    frame = lyrics.merge(tracks, on="id", how="inner", validate="one_to_one")
+    frame["word_density"] = frame["n_words"] / (
+        frame["n_sentences"] + 1e-5
+    )
+    DetectorFactory.seed = 0
+    frame["is_english"] = frame["lyrics"].apply(
+        lambda text: int(lyric_language(text) == "en")
+    )
+    frame["repetition_score"] = frame["lyrics"].apply(repetition_score)
+    frame["avg_word_length"] = frame["lyrics"].apply(average_word_length)
+    syllables = frame["lyrics"].apply(syllable_features)
+    frame["syllables_per_line"] = syllables.str[0]
+    frame["syllables_per_word"] = syllables.str[1]
+    return frame[["id", "popularity", *LYRIC_FEATURES]]
 
 
 class ViTCheckpointHead:
@@ -65,18 +166,23 @@ class ViTCheckpointHead:
         return 100.0 / (1.0 + np.exp(-np.clip(logits, -50.0, 50.0)))
 
 
-class ViTHeadLyricsRandomForest:
-    """Apply the checkpoint head, then combine its output with lyrics."""
+class ConvexPredictionBlend:
+    """Blend ViT and lyrics-RF predictions with a fixed validation weight."""
 
-    def __init__(self, vit_head, forest_model, lyric_features):
+    def __init__(self, vit_head, forest_model, lyric_features, vit_weight):
         self.vit_head = vit_head
         self.forest_model = forest_model
         self.lyric_features = list(lyric_features)
+        self.vit_weight = float(vit_weight)
 
     def predict(self, frame):
         vit_predictions = self.vit_head.predict(frame)
-        return self.forest_model.predict(
-            stacked_features(frame, vit_predictions, self.lyric_features)
+        lyrics_predictions = self.forest_model.predict(
+            frame[self.lyric_features]
+        )
+        return (
+            self.vit_weight * vit_predictions
+            + (1.0 - self.vit_weight) * lyrics_predictions
         )
 
 
@@ -95,7 +201,7 @@ def main():
     args = parse_args()
     np.random.seed(RANDOM_SEED)
 
-    embedding_path, split_track_ids, embeddings, embedding_features = (
+    embedding_path, _split_track_ids, embeddings, embedding_features = (
         load_embeddings(
             "ViT", EMBEDDING_DIMENSIONS["ViT"], "_fixed"
         )
@@ -103,22 +209,13 @@ def main():
     embedding_paths = {"ViT": str(embedding_path)}
     embedding_groups = {"ViT": embedding_features}
 
-    tracks = pd.read_csv(
-        TRACKS_CSV, usecols=["id", "popularity"], dtype={"id": str}
-    ).dropna(subset=["id", "popularity"])
-    tracks = tracks.drop_duplicates("id")
-    lyrics, lyric_features = numeric_feature_frame(
-        LYRICS_CSV, "track_id", "lyrics_"
-    )
-    lyrics = lyrics.drop_duplicates("id")
-    # Lyrics are optional and median-imputed by each Random Forest pipeline.
-    # Loading them directly avoids filtering on unrelated audio availability.
-    tabular = tracks.merge(lyrics, on="id", how="left", validate="one_to_one")
+    tabular = load_notebook_lyrics_features()
+    lyric_features = LYRIC_FEATURES
     combined = embeddings.merge(
         tabular, on="id", how="inner", validate="one_to_one"
     ).set_index("id")
     train_ids, validation_ids, test_ids = grouped_track_id_split(
-        split_track_ids
+        combined.index
     )
     partitions = {
         name: combined.loc[combined.index.isin(ids)]
@@ -161,17 +258,9 @@ def main():
         RandomForestRegressor(
             **MODEL_PARAMETERS,
             n_jobs=-1,
-            random_state=RANDOM_SEED,
+            random_state=RF_RANDOM_SEED,
         )
     )
-    combined_forest = tree_pipeline(
-        RandomForestRegressor(
-            **MODEL_PARAMETERS,
-            n_jobs=-1,
-            random_state=RANDOM_SEED,
-        )
-    )
-
     print(f"training three models on {len(x['train'])} tracks", flush=True)
     print(
         "using the fixed ViT checkpoint's trained Linear + sigmoid head",
@@ -187,14 +276,45 @@ def main():
     )
     fit_seconds["lyrics_random_forest"] = time.perf_counter() - started
 
-    combined_train_x = stacked_features(
-        x["train"], vit_head.predict(x["train"]), lyric_features
-    )
     started = time.perf_counter()
-    combined_forest.fit(combined_train_x, y["train"])
-    fit_seconds["combined_stack"] = time.perf_counter() - started
-    combined_model = ViTHeadLyricsRandomForest(
-        vit_head, combined_forest, lyric_features
+    validation_vit = vit_head.predict(x["validation"])
+    validation_lyrics = lyrics_forest.predict(
+        x["validation"][lyric_features]
+    )
+    blend_rows = []
+    for vit_weight in np.linspace(0.0, 1.0, 101):
+        predictions = (
+            vit_weight * validation_vit
+            + (1.0 - vit_weight) * validation_lyrics
+        )
+        blend_rows.append(
+            {
+                "vit_weight": float(vit_weight),
+                "lyrics_weight": float(1.0 - vit_weight),
+                "validation_mae": float(
+                    mean_absolute_error(y["validation"], predictions)
+                ),
+                "validation_rmse": float(
+                    mean_squared_error(y["validation"], predictions) ** 0.5
+                ),
+                "validation_r2": float(
+                    r2_score(y["validation"], predictions)
+                ),
+            }
+        )
+    best_blend = min(blend_rows, key=lambda row: row["validation_rmse"])
+    combined_model = ConvexPredictionBlend(
+        vit_head,
+        lyrics_forest,
+        lyric_features,
+        best_blend["vit_weight"],
+    )
+    fit_seconds["convex_blend_search"] = time.perf_counter() - started
+    print(
+        f"best blend: ViT={best_blend['vit_weight']:.2f}, "
+        f"lyrics RF={best_blend['lyrics_weight']:.2f}, "
+        f"validation RMSE={best_blend['validation_rmse']:.3f}",
+        flush=True,
     )
     metrics = {
         "vit_checkpoint_head": {
@@ -215,12 +335,12 @@ def main():
             )
             for split in ("train", "validation", "test")
         },
-        "combined_stack": {
+        "convex_blend": {
             split: evaluate(
                 combined_model,
                 x[split],
                 y[split],
-                f"combined stack {split}",
+                f"convex blend {split}",
             )
             for split in ("train", "validation", "test")
         },
@@ -233,18 +353,20 @@ def main():
                 "bias": head_bias,
             },
             "lyrics_random_forest": lyrics_forest,
-            "combined_random_forest": combined_forest,
         },
         "vit_head": "checkpoint Linear(768, 1) + sigmoid",
         "vit_checkpoint": str(VIT_CHECKPOINT),
         "model_parameters": MODEL_PARAMETERS,
+        "random_forest_seed": RF_RANDOM_SEED,
+        "blend_selection": {
+            "criterion": "validation_rmse",
+            "candidates": 101,
+            "best": best_blend,
+        },
         "metrics": metrics,
         "fit_seconds": fit_seconds,
         "input_feature_names": feature_names,
-        "random_forest_feature_names": [
-            VIT_HEAD_FEATURE,
-            *lyric_features,
-        ],
+        "random_forest_feature_names": lyric_features,
         "embedding_feature_names": embedding_groups,
         "embedding_paths": embedding_paths,
         "modalities": ["ViT_fixed_embeddings", "lyrics"],
@@ -256,6 +378,8 @@ def main():
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     joblib.dump(artifact, args.output)
+    blend_path = args.output.with_suffix(".blend_weights.csv")
+    pd.DataFrame(blend_rows).to_csv(blend_path, index=False)
     metrics_path = args.output.with_suffix(".metrics.json")
     metrics_path.write_text(
         json.dumps(
@@ -271,6 +395,7 @@ def main():
     )
     print(f"saved model to {args.output}", flush=True)
     print(f"saved metrics to {metrics_path}", flush=True)
+    print(f"saved blend weights to {blend_path}", flush=True)
 
 
 if __name__ == "__main__":
