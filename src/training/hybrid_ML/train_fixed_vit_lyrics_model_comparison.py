@@ -1,10 +1,9 @@
-"""Compare lyrics RF, ViT Ridge, and their stacked combination.
+"""Compare lyrics RF, the trained ViT head, and their combination.
 
-A Ridge linear layer first reduces the fixed ViT embedding to one supervised
-feature. The Random Forest receives that feature plus the lyrics features.
-Out-of-fold linear predictions are used to train the forest, preventing target
-leakage between the two stages. All three models use the same fixed population
-and artist/album-isolated train, validation, and test partitions.
+The original fixed ViT checkpoint's trained Linear + sigmoid head reduces each
+cached ViT embedding to its popularity prediction. The combined Random Forest
+receives that prediction plus the lyrics features. All three models use the
+same fixed population and artist/album-isolated partitions.
 """
 
 import argparse
@@ -15,23 +14,20 @@ from pathlib import Path
 import joblib
 import numpy as np
 import pandas as pd
+import torch
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.linear_model import Ridge
-from sklearn.model_selection import GroupKFold, cross_val_predict
 
 from training.data_utils import grouped_track_id_split
 from training.hybrid_ML.train_all_embeddings_hybrid import (
     CHECKPOINT_DIR,
     EMBEDDING_DIMENSIONS,
+    LYRICS_CSV,
     RANDOM_SEED,
+    TRACKS_CSV,
     evaluate,
     load_embeddings,
-    load_tabular_features,
-    scaled_pipeline,
+    numeric_feature_frame,
     tree_pipeline,
-)
-from training.hybrid_ML.search_fixed_no_artist_xgboost import (
-    artist_album_groups,
 )
 
 
@@ -44,36 +40,43 @@ MODEL_PARAMETERS = {
     "max_depth": 35,
     "bootstrap": True,
 }
-LINEAR_ALPHA = 10.0
-STACKING_FOLDS = 5
-VIT_LINEAR_FEATURE = "vit_linear_prediction"
+VIT_CHECKPOINT = CHECKPOINT_DIR / "best_ViT_fixed_model.pt"
+VIT_HEAD_FEATURE = "vit_checkpoint_prediction"
 
 
-def stacked_features(frame, linear_predictions, lyric_features):
+def stacked_features(frame, vit_predictions, lyric_features):
     features = frame[lyric_features].copy()
-    features.insert(0, VIT_LINEAR_FEATURE, np.asarray(linear_predictions))
+    features.insert(0, VIT_HEAD_FEATURE, np.asarray(vit_predictions))
     return features
 
 
-class ViTLinearLyricsRandomForest:
-    """Serializable two-stage predictor operating on the original columns."""
+class ViTCheckpointHead:
+    """Apply the checkpoint's trained Linear + sigmoid head to embeddings."""
 
-    def __init__(
-        self, linear_model, forest_model, embedding_features, lyric_features
-    ):
-        self.linear_model = linear_model
-        self.forest_model = forest_model
+    def __init__(self, weight, bias, embedding_features):
+        self.weight = np.asarray(weight).reshape(-1)
+        self.bias = float(bias)
         self.embedding_features = list(embedding_features)
+
+    def predict(self, frame):
+        logits = (
+            frame[self.embedding_features].to_numpy() @ self.weight + self.bias
+        )
+        return 100.0 / (1.0 + np.exp(-np.clip(logits, -50.0, 50.0)))
+
+
+class ViTHeadLyricsRandomForest:
+    """Apply the checkpoint head, then combine its output with lyrics."""
+
+    def __init__(self, vit_head, forest_model, lyric_features):
+        self.vit_head = vit_head
+        self.forest_model = forest_model
         self.lyric_features = list(lyric_features)
 
     def predict(self, frame):
-        linear_predictions = self.linear_model.predict(
-            frame[self.embedding_features]
-        )
+        vit_predictions = self.vit_head.predict(frame)
         return self.forest_model.predict(
-            stacked_features(
-                frame, linear_predictions, self.lyric_features
-            )
+            stacked_features(frame, vit_predictions, self.lyric_features)
         )
 
 
@@ -99,7 +102,18 @@ def main():
     )
     embedding_paths = {"ViT": str(embedding_path)}
     embedding_groups = {"ViT": embedding_features}
-    tabular, tabular_groups = load_tabular_features()
+
+    tracks = pd.read_csv(
+        TRACKS_CSV, usecols=["id", "popularity"], dtype={"id": str}
+    ).dropna(subset=["id", "popularity"])
+    tracks = tracks.drop_duplicates("id")
+    lyrics, lyric_features = numeric_feature_frame(
+        LYRICS_CSV, "track_id", "lyrics_"
+    )
+    lyrics = lyrics.drop_duplicates("id")
+    # Lyrics are optional and median-imputed by each Random Forest pipeline.
+    # Loading them directly avoids filtering on unrelated audio availability.
+    tabular = tracks.merge(lyrics, on="id", how="left", validate="one_to_one")
     combined = embeddings.merge(
         tabular, on="id", how="inner", validate="one_to_one"
     ).set_index("id")
@@ -119,12 +133,30 @@ def main():
 
     feature_names = [
         *embedding_features,
-        *tabular_groups["lyrics"],
+        *lyric_features,
     ]
     x = {name: frame[feature_names] for name, frame in partitions.items()}
     y = {name: frame["popularity"] for name, frame in partitions.items()}
 
-    linear_model = scaled_pipeline(Ridge(alpha=LINEAR_ALPHA))
+    checkpoint = torch.load(
+        VIT_CHECKPOINT, map_location="cpu", weights_only=True
+    )
+    state = checkpoint.get("model_state_dict", checkpoint)
+    try:
+        head_weight = state["head.1.weight"].detach().cpu().numpy()
+        head_bias = state["head.1.bias"].detach().cpu().numpy()
+    except KeyError as error:
+        raise ValueError(
+            f"{VIT_CHECKPOINT} does not contain the expected ViT head"
+        ) from error
+    if head_weight.shape != (1, len(embedding_features)):
+        raise ValueError(
+            f"ViT head has shape {head_weight.shape}; expected "
+            f"(1, {len(embedding_features)})"
+        )
+    vit_head = ViTCheckpointHead(
+        head_weight, head_bias.item(), embedding_features
+    )
     lyrics_forest = tree_pipeline(
         RandomForestRegressor(
             **MODEL_PARAMETERS,
@@ -142,58 +174,42 @@ def main():
 
     print(f"training three models on {len(x['train'])} tracks", flush=True)
     print(
-        f"creating {STACKING_FOLDS}-fold artist/album-grouped "
-        "out-of-fold ViT linear predictions",
+        "using the fixed ViT checkpoint's trained Linear + sigmoid head",
         flush=True,
     )
     print(f"parameters: {MODEL_PARAMETERS}", flush=True)
     fit_seconds = {}
-    started = time.perf_counter()
-    train_groups = artist_album_groups(x["train"].index)
-    oof_linear_predictions = cross_val_predict(
-        linear_model,
-        x["train"][embedding_features],
-        y["train"],
-        groups=train_groups,
-        cv=GroupKFold(n_splits=STACKING_FOLDS),
-        method="predict",
-        n_jobs=1,
-    )
-    linear_model.fit(x["train"][embedding_features], y["train"])
-    fit_seconds["vit_ridge"] = time.perf_counter() - started
+    fit_seconds["vit_checkpoint_head"] = 0.0
 
     started = time.perf_counter()
     lyrics_forest.fit(
-        x["train"][tabular_groups["lyrics"]], y["train"]
+        x["train"][lyric_features], y["train"]
     )
     fit_seconds["lyrics_random_forest"] = time.perf_counter() - started
 
     combined_train_x = stacked_features(
-        x["train"], oof_linear_predictions, tabular_groups["lyrics"]
+        x["train"], vit_head.predict(x["train"]), lyric_features
     )
     started = time.perf_counter()
     combined_forest.fit(combined_train_x, y["train"])
     fit_seconds["combined_stack"] = time.perf_counter() - started
-    combined_model = ViTLinearLyricsRandomForest(
-        linear_model,
-        combined_forest,
-        embedding_features,
-        tabular_groups["lyrics"],
+    combined_model = ViTHeadLyricsRandomForest(
+        vit_head, combined_forest, lyric_features
     )
     metrics = {
-        "vit_ridge": {
+        "vit_checkpoint_head": {
             split: evaluate(
-                linear_model,
-                x[split][embedding_features],
+                vit_head,
+                x[split],
                 y[split],
-                f"ViT Ridge {split}",
+                f"ViT checkpoint {split}",
             )
             for split in ("train", "validation", "test")
         },
         "lyrics_random_forest": {
             split: evaluate(
                 lyrics_forest,
-                x[split][tabular_groups["lyrics"]],
+                x[split][lyric_features],
                 y[split],
                 f"lyrics Random Forest {split}",
             )
@@ -212,21 +228,22 @@ def main():
 
     artifact = {
         "models": {
-            "linear_model": linear_model,
+            "vit_checkpoint_head": {
+                "weight": head_weight,
+                "bias": head_bias,
+            },
             "lyrics_random_forest": lyrics_forest,
             "combined_random_forest": combined_forest,
         },
-        "linear_model": "Ridge",
-        "linear_alpha": LINEAR_ALPHA,
-        "stacking_folds": STACKING_FOLDS,
-        "stacking_cv": "artist_album_component_group_k_fold",
+        "vit_head": "checkpoint Linear(768, 1) + sigmoid",
+        "vit_checkpoint": str(VIT_CHECKPOINT),
         "model_parameters": MODEL_PARAMETERS,
         "metrics": metrics,
         "fit_seconds": fit_seconds,
         "input_feature_names": feature_names,
         "random_forest_feature_names": [
-            VIT_LINEAR_FEATURE,
-            *tabular_groups["lyrics"],
+            VIT_HEAD_FEATURE,
+            *lyric_features,
         ],
         "embedding_feature_names": embedding_groups,
         "embedding_paths": embedding_paths,
