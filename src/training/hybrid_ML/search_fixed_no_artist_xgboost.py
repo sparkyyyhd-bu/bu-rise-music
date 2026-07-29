@@ -41,6 +41,17 @@ from xgboost import XGBRegressor
 DEFAULT_OUTPUT = CHECKPOINT_DIR / "fixed_no_artist_xgboost_random_search.joblib"
 
 
+def json_safe(value):
+    """Convert NumPy values sampled by SciPy into JSON-native values."""
+    if isinstance(value, dict):
+        return {key: json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [json_safe(item) for item in value]
+    if isinstance(value, np.generic):
+        return value.item()
+    return value
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--n-iter", type=int, default=50)
@@ -253,7 +264,13 @@ def main():
     metrics_path = args.output.with_suffix(".metrics.json")
     metrics_path.write_text(
         json.dumps(
-            {key: value for key, value in artifact.items() if key != "model"},
+            json_safe(
+                {
+                    key: value
+                    for key, value in artifact.items()
+                    if key != "model"
+                }
+            ),
             indent=2,
         )
         + "\n",
