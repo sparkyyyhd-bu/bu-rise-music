@@ -1,23 +1,19 @@
 #!/bin/bash -l
 
 #$ -P rise-grid
-#$ -N train_fixed_no_artist_xgboost_specific
+#$ -N train_fixed_vit_lyrics_random_forest
 #$ -l h_rt=06:00:00
-#$ -pe omp 8
-#$ -l gpus=1
-#$ -l gpu_c=8.0
-#$ -l gpu_memory=40G
+#$ -pe omp 16
 
 module load python3/3.10.12
-module load cuda/12.2
 
 PROJECT_STORAGE="${PROJECT_STORAGE:-/project/rise-grid/$USER}"
 REPO_DIR="${REPO_DIR:-$PROJECT_STORAGE/bu-rise-music}"
 cd "$REPO_DIR"
 
 mkdir -p "$REPO_DIR/logs"
-exec >>"$REPO_DIR/logs/train_fixed_no_artist_xgboost_specific.${JOB_ID}.qlog" \
-     2>>"$REPO_DIR/logs/train_fixed_no_artist_xgboost_specific.${JOB_ID}.err"
+exec >>"$REPO_DIR/logs/train_fixed_vit_lyrics_random_forest.${JOB_ID}.qlog" \
+     2>>"$REPO_DIR/logs/train_fixed_vit_lyrics_random_forest.${JOB_ID}.err"
 echo "job ${JOB_ID} started on $(hostname) at $(date)"
 
 VENV_DIR="$PROJECT_STORAGE/venvs/bu-rise-train"
@@ -32,5 +28,4 @@ pip install --upgrade -r requirements.txt
 
 export PYTHONPATH="$REPO_DIR/src:$PYTHONPATH"
 
-python -u src/training/hybrid_ML/train_fixed_no_artist_xgboost_specific.py \
-    --device cuda
+python -u src/training/hybrid_ML/train_fixed_vit_lyrics_random_forest.py
