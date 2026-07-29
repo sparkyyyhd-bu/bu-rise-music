@@ -18,9 +18,9 @@ cd "$REPO_DIR"
 # Keep unique, persistent logs for every submission. Grid Engine's default
 # train_LSTM.o<job_id>/train_LSTM.e<job_id> files remain as a fallback for any
 # failure that happens before these redirects are established.
-mkdir -p "$REPO_DIR/logs"
-exec >>"$REPO_DIR/logs/train_LSTM_legacy.${JOB_ID}.qlog" \
-     2>>"$REPO_DIR/logs/train_LSTM_legacy.${JOB_ID}.err"
+mkdir -p "$REPO_DIR/logs/neural/lstm"
+exec >>"$REPO_DIR/logs/neural/lstm/train_LSTM_legacy.${JOB_ID}.qlog" \
+     2>>"$REPO_DIR/logs/neural/lstm/train_LSTM_legacy.${JOB_ID}.err"
 echo "job ${JOB_ID} started on $(hostname) at $(date)"
 
 # Needs modern torch (H200 = sm_90), which the cluster's pytorch module (tops out at 1.13.1)

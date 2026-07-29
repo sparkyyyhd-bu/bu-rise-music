@@ -11,9 +11,9 @@ PROJECT_STORAGE="${PROJECT_STORAGE:-/project/rise-grid/$USER}"
 REPO_DIR="${REPO_DIR:-$PROJECT_STORAGE/bu-rise-music}"
 cd "$REPO_DIR"
 
-mkdir -p "$REPO_DIR/logs"
-exec >>"$REPO_DIR/logs/train_fixed_vit_lyrics_model_comparison.${JOB_ID}.qlog" \
-     2>>"$REPO_DIR/logs/train_fixed_vit_lyrics_model_comparison.${JOB_ID}.err"
+mkdir -p "$REPO_DIR/logs/hybrid"
+exec >>"$REPO_DIR/logs/hybrid/train_fixed_vit_lyrics_model_comparison.${JOB_ID}.qlog" \
+     2>>"$REPO_DIR/logs/hybrid/train_fixed_vit_lyrics_model_comparison.${JOB_ID}.err"
 echo "job ${JOB_ID} started on $(hostname) at $(date)"
 
 VENV_DIR="$PROJECT_STORAGE/venvs/bu-rise-train"
