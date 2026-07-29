@@ -1,0 +1,244 @@
+job 6959733 started on scc-504 at Wed Jul 29 08:50:46 EDT 2026
+Requirement already satisfied: pip in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (26.1.2)
+Requirement already satisfied: setuptools in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (83.0.0)
+Requirement already satisfied: pandas in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from -r requirements.txt (line 1)) (2.3.3)
+Requirement already satisfied: requests in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from -r requirements.txt (line 2)) (2.34.2)
+Requirement already satisfied: kagglehub in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from -r requirements.txt (line 3)) (1.0.2)
+Requirement already satisfied: ipython in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from -r requirements.txt (line 4)) (8.39.0)
+Requirement already satisfied: torch in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from -r requirements.txt (line 5)) (2.13.0)
+Requirement already satisfied: torchvision in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from -r requirements.txt (line 6)) (0.28.0)
+Requirement already satisfied: torchaudio in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from -r requirements.txt (line 7)) (2.11.0)
+Requirement already satisfied: torchmetrics in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from -r requirements.txt (line 8)) (1.9.0)
+Requirement already satisfied: tqdm in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from -r requirements.txt (line 9)) (4.70.0)
+Requirement already satisfied: scikit-learn in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from -r requirements.txt (line 10)) (1.7.2)
+Requirement already satisfied: joblib in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from -r requirements.txt (line 11)) (1.5.3)
+Requirement already satisfied: xgboost in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from -r requirements.txt (line 12)) (3.2.0)
+Requirement already satisfied: numpy>=1.22.4 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from pandas->-r requirements.txt (line 1)) (2.2.6)
+Requirement already satisfied: python-dateutil>=2.8.2 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from pandas->-r requirements.txt (line 1)) (2.9.0.post0)
+Requirement already satisfied: pytz>=2020.1 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from pandas->-r requirements.txt (line 1)) (2026.2)
+Requirement already satisfied: tzdata>=2022.7 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from pandas->-r requirements.txt (line 1)) (2026.3)
+Requirement already satisfied: charset_normalizer<4,>=2 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from requests->-r requirements.txt (line 2)) (3.4.9)
+Requirement already satisfied: idna<4,>=2.5 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from requests->-r requirements.txt (line 2)) (3.18)
+Requirement already satisfied: urllib3<3,>=1.26 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from requests->-r requirements.txt (line 2)) (2.7.0)
+Requirement already satisfied: certifi>=2023.5.7 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from requests->-r requirements.txt (line 2)) (2026.6.17)
+Requirement already satisfied: kagglesdk<1.0,>=0.1.22 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from kagglehub->-r requirements.txt (line 3)) (0.1.28)
+Requirement already satisfied: packaging in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from kagglehub->-r requirements.txt (line 3)) (26.2)
+Requirement already satisfied: pyyaml in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from kagglehub->-r requirements.txt (line 3)) (6.0.3)
+Requirement already satisfied: protobuf in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from kagglesdk<1.0,>=0.1.22->kagglehub->-r requirements.txt (line 3)) (7.35.1)
+Requirement already satisfied: decorator in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from ipython->-r requirements.txt (line 4)) (5.3.1)
+Requirement already satisfied: exceptiongroup in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from ipython->-r requirements.txt (line 4)) (1.3.1)
+Requirement already satisfied: jedi>=0.16 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from ipython->-r requirements.txt (line 4)) (0.20.0)
+Requirement already satisfied: matplotlib-inline in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from ipython->-r requirements.txt (line 4)) (0.2.2)
+Requirement already satisfied: pexpect>4.3 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from ipython->-r requirements.txt (line 4)) (4.9.0)
+Requirement already satisfied: prompt_toolkit<3.1.0,>=3.0.41 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from ipython->-r requirements.txt (line 4)) (3.0.52)
+Requirement already satisfied: pygments>=2.4.0 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from ipython->-r requirements.txt (line 4)) (2.20.0)
+Requirement already satisfied: stack_data in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from ipython->-r requirements.txt (line 4)) (0.6.3)
+Requirement already satisfied: traitlets>=5.13.0 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from ipython->-r requirements.txt (line 4)) (5.15.1)
+Requirement already satisfied: typing_extensions>=4.6 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from ipython->-r requirements.txt (line 4)) (4.16.0)
+Requirement already satisfied: wcwidth in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from prompt_toolkit<3.1.0,>=3.0.41->ipython->-r requirements.txt (line 4)) (0.8.2)
+Requirement already satisfied: filelock in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from torch->-r requirements.txt (line 5)) (3.32.0)
+Requirement already satisfied: setuptools>=77.0.3 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from torch->-r requirements.txt (line 5)) (83.0.0)
+Requirement already satisfied: sympy>=1.13.3 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from torch->-r requirements.txt (line 5)) (1.14.0)
+Requirement already satisfied: networkx>=2.5.1 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from torch->-r requirements.txt (line 5)) (3.4.2)
+Requirement already satisfied: jinja2 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from torch->-r requirements.txt (line 5)) (3.1.6)
+Requirement already satisfied: fsspec>=0.8.5 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from torch->-r requirements.txt (line 5)) (2026.6.0)
+Requirement already satisfied: cuda-toolkit==13.0.3 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (13.0.3.0)
+Requirement already satisfied: cuda-bindings<14,>=13.0.3 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from torch->-r requirements.txt (line 5)) (13.3.1)
+Requirement already satisfied: nvidia-cudnn-cu13==9.20.0.48 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from torch->-r requirements.txt (line 5)) (9.20.0.48)
+Requirement already satisfied: nvidia-cusparselt-cu13==0.8.1 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from torch->-r requirements.txt (line 5)) (0.8.1)
+Requirement already satisfied: nvidia-nccl-cu13==2.29.7 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from torch->-r requirements.txt (line 5)) (2.29.7)
+Requirement already satisfied: nvidia-nvshmem-cu13==3.4.5 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from torch->-r requirements.txt (line 5)) (3.4.5)
+Requirement already satisfied: triton==3.7.1 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from torch->-r requirements.txt (line 5)) (3.7.1)
+Requirement already satisfied: nvidia-cuda-runtime==13.0.96.* in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (13.0.96)
+Requirement already satisfied: nvidia-cuda-nvrtc==13.0.88.* in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (13.0.88)
+Requirement already satisfied: nvidia-nvjitlink<14,>=13.0.88 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (13.3.33)
+Requirement already satisfied: nvidia-cublas==13.1.1.3.* in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (13.1.1.3)
+Requirement already satisfied: nvidia-cusolver==12.0.4.66.* in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (12.0.4.66)
+Requirement already satisfied: nvidia-cusparse==12.6.3.3.* in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (12.6.3.3)
+Requirement already satisfied: nvidia-nvtx==13.0.85.* in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (13.0.85)
+Requirement already satisfied: nvidia-cufile==1.15.1.6.* in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (1.15.1.6)
+Requirement already satisfied: nvidia-curand==10.4.0.35.* in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (10.4.0.35)
+Requirement already satisfied: nvidia-cufft==12.0.0.61.* in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (12.0.0.61)
+Requirement already satisfied: nvidia-cuda-cupti==13.0.85.* in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (13.0.85)
+Requirement already satisfied: cuda-pathfinder>=1.4.2 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-bindings<14,>=13.0.3->torch->-r requirements.txt (line 5)) (1.5.6)
+Requirement already satisfied: pillow!=8.3.*,>=5.3.0 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from torchvision->-r requirements.txt (line 6)) (12.3.0)
+Requirement already satisfied: lightning-utilities>=0.15.3 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from torchmetrics->-r requirements.txt (line 8)) (0.15.3)
+Requirement already satisfied: scipy>=1.8.0 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from scikit-learn->-r requirements.txt (line 10)) (1.15.3)
+Requirement already satisfied: threadpoolctl>=3.1.0 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from scikit-learn->-r requirements.txt (line 10)) (3.6.0)
+Requirement already satisfied: nvidia-nccl-cu12 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from xgboost->-r requirements.txt (line 12)) (2.30.7)
+Requirement already satisfied: parso<0.9.0,>=0.8.6 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from jedi>=0.16->ipython->-r requirements.txt (line 4)) (0.8.7)
+Requirement already satisfied: ptyprocess>=0.5 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from pexpect>4.3->ipython->-r requirements.txt (line 4)) (0.7.0)
+Requirement already satisfied: six>=1.5 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from python-dateutil>=2.8.2->pandas->-r requirements.txt (line 1)) (1.17.0)
+Requirement already satisfied: mpmath<1.4,>=1.1.0 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from sympy>=1.13.3->torch->-r requirements.txt (line 5)) (1.3.0)
+Requirement already satisfied: MarkupSafe>=2.0 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from jinja2->torch->-r requirements.txt (line 5)) (3.0.3)
+Requirement already satisfied: executing>=1.2.0 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from stack_data->ipython->-r requirements.txt (line 4)) (2.2.1)
+Requirement already satisfied: asttokens>=2.1.0 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from stack_data->ipython->-r requirements.txt (line 4)) (3.0.2)
+Requirement already satisfied: pure-eval in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from stack_data->ipython->-r requirements.txt (line 4)) (0.2.3)
+using GPU for XGBoost: NVIDIA L40S
+fixed artist/album-isolated split train=71354 (70.0%), validation=15290 (15.0%), test=15290 (15.0%), fingerprint=b3be2a8229de75fa
+legacy deterministic random split train=71359, validation=15290, test=15290
+
+==============================================================================
+Fixed embeddings + audio + lyrics (no artist stats)
+split=artist_album_isolated_fixed_70_15_15; features=2210; train=71335, validation=15287, test=15283
+
+training ridge on 71335 samples...
+ridge train: MAE 8.399 | RMSE 10.733 | R2 0.626
+ridge validation: MAE 11.604 | RMSE 14.697 | R2 -0.035
+ridge test: MAE 11.663 | RMSE 14.725 | R2 -0.041
+
+training random_forest on 71335 samples...
+random_forest train: MAE 3.507 | RMSE 4.693 | R2 0.928
+random_forest validation: MAE 11.538 | RMSE 14.641 | R2 -0.027
+random_forest test: MAE 11.551 | RMSE 14.626 | R2 -0.027
+
+training extra_trees on 71335 samples...
+extra_trees train: MAE 1.028 | RMSE 2.170 | R2 0.985
+extra_trees validation: MAE 11.525 | RMSE 14.619 | R2 -0.024
+extra_trees test: MAE 11.529 | RMSE 14.606 | R2 -0.024
+
+training xgboost on 71335 samples...
+xgboost train: MAE 5.137 | RMSE 6.602 | R2 0.858
+xgboost validation: MAE 11.422 | RMSE 14.495 | R2 -0.007
+xgboost test: MAE 11.479 | RMSE 14.525 | R2 -0.012
+
+training knn on 30000 samples...
+knn train: MAE 0.081 | RMSE 0.897 | R2 0.997
+knn validation: MAE 11.766 | RMSE 14.790 | R2 -0.048
+knn test: MAE 11.786 | RMSE 14.808 | R2 -0.052
+
+training linear_svm on 71335 samples...
+linear_svm train: MAE 8.345 | RMSE 10.809 | R2 0.621
+linear_svm validation: MAE 11.699 | RMSE 14.826 | R2 -0.053
+linear_svm test: MAE 11.745 | RMSE 14.842 | R2 -0.057
+
+training rbf_svm on 20000 samples...
+rbf_svm train: MAE 7.671 | RMSE 10.389 | R2 0.651
+rbf_svm validation: MAE 11.829 | RMSE 14.968 | R2 -0.073
+rbf_svm test: MAE 11.845 | RMSE 14.960 | R2 -0.074
+
+training mlp on 71335 samples...
+mlp train: MAE 8.318 | RMSE 10.655 | R2 0.631
+mlp validation: MAE 11.676 | RMSE 14.814 | R2 -0.051
+mlp test: MAE 11.681 | RMSE 14.774 | R2 -0.047
+
+Fixed embeddings + audio + lyrics (no artist stats) leaderboard:
+ 1. xgboost            validation RMSE 14.495 | test RMSE 14.525, MAE 11.479, R2 -0.012
+ 2. extra_trees        validation RMSE 14.619 | test RMSE 14.606, MAE 11.529, R2 -0.024
+ 3. random_forest      validation RMSE 14.641 | test RMSE 14.626, MAE 11.551, R2 -0.027
+ 4. ridge              validation RMSE 14.697 | test RMSE 14.725, MAE 11.663, R2 -0.041
+ 5. knn                validation RMSE 14.790 | test RMSE 14.808, MAE 11.786, R2 -0.052
+ 6. mlp                validation RMSE 14.814 | test RMSE 14.774, MAE 11.681, R2 -0.047
+ 7. linear_svm         validation RMSE 14.826 | test RMSE 14.842, MAE 11.745, R2 -0.057
+ 8. rbf_svm            validation RMSE 14.968 | test RMSE 14.960, MAE 11.845, R2 -0.074
+
+==============================================================================
+Fixed embeddings + audio + lyrics + artist stats
+split=artist_album_isolated_fixed_70_15_15; features=2212; train=71335, validation=15287, test=15283
+
+training ridge on 71335 samples...
+ridge train: MAE 7.910 | RMSE 10.130 | R2 0.667
+ridge validation: MAE 9.642 | RMSE 12.340 | R2 0.270
+ridge test: MAE 9.672 | RMSE 12.332 | R2 0.270
+
+training random_forest on 71335 samples...
+random_forest train: MAE 3.401 | RMSE 4.560 | R2 0.932
+random_forest validation: MAE 10.638 | RMSE 13.564 | R2 0.118
+random_forest test: MAE 10.668 | RMSE 13.576 | R2 0.115
+
+training extra_trees on 71335 samples...
+extra_trees train: MAE 1.016 | RMSE 2.137 | R2 0.985
+extra_trees validation: MAE 11.218 | RMSE 14.228 | R2 0.030
+extra_trees test: MAE 11.232 | RMSE 14.218 | R2 0.030
+
+training xgboost on 71335 samples...
+xgboost train: MAE 4.639 | RMSE 6.046 | R2 0.881
+xgboost validation: MAE 8.107 | RMSE 10.799 | R2 0.441
+xgboost test: MAE 8.197 | RMSE 10.892 | R2 0.431
+
+training knn on 30000 samples...
+knn train: MAE 0.061 | RMSE 0.794 | R2 0.998
+knn validation: MAE 11.607 | RMSE 14.588 | R2 -0.020
+knn test: MAE 11.637 | RMSE 14.621 | R2 -0.026
+
+training linear_svm on 71335 samples...
+linear_svm train: MAE 7.841 | RMSE 10.202 | R2 0.662
+linear_svm validation: MAE 9.589 | RMSE 12.304 | R2 0.275
+linear_svm test: MAE 9.613 | RMSE 12.298 | R2 0.274
+
+training rbf_svm on 20000 samples...
+rbf_svm train: MAE 7.134 | RMSE 9.743 | R2 0.693
+rbf_svm validation: MAE 9.762 | RMSE 12.497 | R2 0.252
+rbf_svm test: MAE 9.765 | RMSE 12.468 | R2 0.254
+
+training mlp on 71335 samples...
+mlp train: MAE 7.490 | RMSE 9.644 | R2 0.698
+mlp validation: MAE 9.141 | RMSE 11.872 | R2 0.325
+mlp test: MAE 9.145 | RMSE 11.825 | R2 0.329
+
+Fixed embeddings + audio + lyrics + artist stats leaderboard:
+ 1. xgboost            validation RMSE 10.799 | test RMSE 10.892, MAE 8.197, R2 0.431
+ 2. mlp                validation RMSE 11.872 | test RMSE 11.825, MAE 9.145, R2 0.329
+ 3. linear_svm         validation RMSE 12.304 | test RMSE 12.298, MAE 9.613, R2 0.274
+ 4. ridge              validation RMSE 12.340 | test RMSE 12.332, MAE 9.672, R2 0.270
+ 5. rbf_svm            validation RMSE 12.497 | test RMSE 12.468, MAE 9.765, R2 0.254
+ 6. random_forest      validation RMSE 13.564 | test RMSE 13.576, MAE 10.668, R2 0.115
+ 7. extra_trees        validation RMSE 14.228 | test RMSE 14.218, MAE 11.232, R2 0.030
+ 8. knn                validation RMSE 14.588 | test RMSE 14.621, MAE 11.637, R2 -0.026
+
+==============================================================================
+Legacy deterministic-random embeddings + audio + lyrics + artist stats
+split=legacy_random_70_15_15; features=2212; train=71336, validation=15286, test=15283
+
+training ridge on 71336 samples...
+ridge train: MAE 7.884 | RMSE 10.133 | R2 0.637
+ridge validation: MAE 9.660 | RMSE 12.379 | R2 0.457
+ridge test: MAE 9.512 | RMSE 12.209 | R2 0.464
+
+training random_forest on 71336 samples...
+random_forest train: MAE 3.445 | RMSE 4.575 | R2 0.926
+random_forest validation: MAE 10.086 | RMSE 12.890 | R2 0.411
+random_forest test: MAE 9.985 | RMSE 12.765 | R2 0.414
+
+training extra_trees on 71336 samples...
+extra_trees train: MAE 0.998 | RMSE 1.994 | R2 0.986
+extra_trees validation: MAE 10.395 | RMSE 13.230 | R2 0.379
+extra_trees test: MAE 10.278 | RMSE 13.096 | R2 0.384
+
+training xgboost on 71336 samples...
+xgboost train: MAE 4.659 | RMSE 6.101 | R2 0.868
+xgboost validation: MAE 8.700 | RMSE 11.468 | R2 0.534
+xgboost test: MAE 8.553 | RMSE 11.272 | R2 0.543
+
+training knn on 30000 samples...
+knn train: MAE 0.038 | RMSE 0.653 | R2 0.998
+knn validation: MAE 10.687 | RMSE 13.561 | R2 0.348
+knn test: MAE 10.617 | RMSE 13.453 | R2 0.350
+
+training linear_svm on 71336 samples...
+linear_svm train: MAE 7.824 | RMSE 10.213 | R2 0.631
+linear_svm validation: MAE 9.598 | RMSE 12.338 | R2 0.460
+linear_svm test: MAE 9.450 | RMSE 12.164 | R2 0.468
+
+training rbf_svm on 20000 samples...
+rbf_svm train: MAE 6.945 | RMSE 9.611 | R2 0.671
+rbf_svm validation: MAE 9.685 | RMSE 12.447 | R2 0.451
+rbf_svm test: MAE 9.556 | RMSE 12.254 | R2 0.460
+
+training mlp on 71336 samples...
+mlp train: MAE 7.532 | RMSE 9.766 | R2 0.662
+mlp validation: MAE 9.619 | RMSE 12.473 | R2 0.448
+mlp test: MAE 9.462 | RMSE 12.255 | R2 0.460
+
+Legacy deterministic-random embeddings + audio + lyrics + artist stats leaderboard:
+ 1. xgboost            validation RMSE 11.468 | test RMSE 11.272, MAE 8.553, R2 0.543
+ 2. linear_svm         validation RMSE 12.338 | test RMSE 12.164, MAE 9.450, R2 0.468
+ 3. ridge              validation RMSE 12.379 | test RMSE 12.209, MAE 9.512, R2 0.464
+ 4. rbf_svm            validation RMSE 12.447 | test RMSE 12.254, MAE 9.556, R2 0.460
+ 5. mlp                validation RMSE 12.473 | test RMSE 12.255, MAE 9.462, R2 0.460
+ 6. random_forest      validation RMSE 12.890 | test RMSE 12.765, MAE 9.985, R2 0.414
+ 7. extra_trees        validation RMSE 13.230 | test RMSE 13.096, MAE 10.278, R2 0.384
+ 8. knn                validation RMSE 13.561 | test RMSE 13.453, MAE 10.617, R2 0.350
+saved model to /net/scc1/scratch/lucaslu/checkpoints/all_embeddings_hybrid_comparison.joblib
+saved metrics to /net/scc1/scratch/lucaslu/checkpoints/all_embeddings_hybrid_comparison.metrics.json
+saved grouped feature importance to /net/scc1/scratch/lucaslu/checkpoints/all_embeddings_hybrid_comparison.feature_importance.csv
