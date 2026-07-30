@@ -28,10 +28,15 @@ from training.data_utils import (
 )
 
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
+REPO_ROOT = Path(__file__).resolve().parents[4]
 USER = os.environ["USER"]
 CHECKPOINT_DIR = Path("/net/scc1/scratch") / USER / "checkpoints"
-OUTPUT_PATH = CHECKPOINT_DIR / "all_embeddings_hybrid_comparison.joblib"
+OUTPUT_PATH = (
+    CHECKPOINT_DIR
+    / "hybrid"
+    / "intermediate_concatenation"
+    / "intermediate_concatenation_comparison.joblib"
+)
 TRACKS_CSV = (
     REPO_ROOT
     / "data"

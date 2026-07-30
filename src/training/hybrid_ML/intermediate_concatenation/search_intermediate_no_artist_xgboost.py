@@ -1,7 +1,8 @@
 """Randomized grouped-CV search for the fixed multimodal no-artist XGBoost.
 
 The feature set exactly matches ``fixed_without_artist_stats`` in
-train_all_embeddings_hybrid.py: all fixed neural embeddings, Spotify and
+intermediate_concatenation/train_intermediate_concatenation.py: all fixed neural
+embeddings, Spotify and
 low-level audio features, and lyrics features. Artist popularity and follower
 counts are deliberately excluded.
 
@@ -25,7 +26,7 @@ from sklearn.base import clone
 from sklearn.model_selection import GroupKFold, RandomizedSearchCV
 
 from training.data_utils import grouped_track_id_split
-from training.hybrid_ML.train_all_embeddings_hybrid import (
+from training.hybrid_ML.intermediate_concatenation.train_intermediate_concatenation import (
     CHECKPOINT_DIR,
     EMBEDDING_DIMENSIONS,
     RANDOM_SEED,
@@ -38,7 +39,13 @@ from training.hybrid_ML.train_all_embeddings_hybrid import (
 from xgboost import XGBRegressor
 
 
-DEFAULT_OUTPUT = CHECKPOINT_DIR / "fixed_no_artist_xgboost_random_search.joblib"
+DEFAULT_OUTPUT = (
+    CHECKPOINT_DIR
+    / "hybrid"
+    / "intermediate_concatenation"
+    / "no_artist"
+    / "intermediate_no_artist_xgboost_random_search.joblib"
+)
 
 
 def json_safe(value):

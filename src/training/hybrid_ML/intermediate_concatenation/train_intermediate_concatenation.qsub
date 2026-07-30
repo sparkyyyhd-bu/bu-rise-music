@@ -1,7 +1,7 @@
 #!/bin/bash -l
 
 #$ -P rise-grid
-#$ -N train_all_embeddings_hybrid_comparison
+#$ -N train_intermediate_concatenation
 #$ -l h_rt=12:00:00
 #$ -pe omp 8
 #$ -l gpus=1
@@ -15,9 +15,9 @@ PROJECT_STORAGE="${PROJECT_STORAGE:-/project/rise-grid/$USER}"
 REPO_DIR="${REPO_DIR:-$PROJECT_STORAGE/bu-rise-music}"
 cd "$REPO_DIR"
 
-mkdir -p "$REPO_DIR/logs/hybrid"
-exec >>"$REPO_DIR/logs/hybrid/train_all_embeddings_hybrid_comparison.${JOB_ID}.qlog" \
-     2>>"$REPO_DIR/logs/hybrid/train_all_embeddings_hybrid_comparison.${JOB_ID}.err"
+mkdir -p "$REPO_DIR/logs/hybrid/intermediate_concatenation"
+exec >>"$REPO_DIR/logs/hybrid/intermediate_concatenation/train_intermediate_concatenation.${JOB_ID}.qlog" \
+     2>>"$REPO_DIR/logs/hybrid/intermediate_concatenation/train_intermediate_concatenation.${JOB_ID}.err"
 echo "job ${JOB_ID} started on $(hostname) at $(date)"
 
 VENV_DIR="$PROJECT_STORAGE/venvs/bu-rise-train"
@@ -32,4 +32,4 @@ pip install --upgrade -r requirements.txt
 
 export PYTHONPATH="$REPO_DIR/src:$PYTHONPATH"
 
-python -u src/training/hybrid_ML/train_all_embeddings_hybrid.py
+python -u src/training/hybrid_ML/intermediate_concatenation/train_intermediate_concatenation.py

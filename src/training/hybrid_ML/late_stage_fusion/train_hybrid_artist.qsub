@@ -1,7 +1,7 @@
 #!/bin/bash -l
 
 #$ -P rise-grid
-#$ -N train_full_hybrid_prediction_blend
+#$ -N train_hybrid_artist
 #$ -l h_rt=12:00:00
 #$ -pe omp 8
 
@@ -11,9 +11,9 @@ PROJECT_STORAGE="${PROJECT_STORAGE:-/project/rise-grid/$USER}"
 REPO_DIR="${REPO_DIR:-$PROJECT_STORAGE/bu-rise-music}"
 cd "$REPO_DIR"
 
-mkdir -p "$REPO_DIR/logs/hybrid"
-exec >>"$REPO_DIR/logs/hybrid/train_full_hybrid_prediction_blend.${JOB_ID}.qlog" \
-     2>>"$REPO_DIR/logs/hybrid/train_full_hybrid_prediction_blend.${JOB_ID}.err"
+mkdir -p "$REPO_DIR/logs/hybrid/late_stage_fusion"
+exec >>"$REPO_DIR/logs/hybrid/late_stage_fusion/train_hybrid_artist.${JOB_ID}.qlog" \
+     2>>"$REPO_DIR/logs/hybrid/late_stage_fusion/train_hybrid_artist.${JOB_ID}.err"
 echo "job ${JOB_ID} started on $(hostname) at $(date)"
 
 VENV_DIR="$PROJECT_STORAGE/venvs/bu-rise-train"
@@ -28,4 +28,4 @@ pip install --upgrade -r requirements.txt
 
 export PYTHONPATH="$REPO_DIR/src:$PYTHONPATH"
 
-python -u src/training/hybrid_ML/train_full_hybrid_prediction_blend.py
+python -u src/training/hybrid_ML/late_stage_fusion/train_hybrid_artist.py

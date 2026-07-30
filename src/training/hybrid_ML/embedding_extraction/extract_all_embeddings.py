@@ -20,7 +20,7 @@ from training.train_ResNet import PopularityResNet
 from training.train_ViT import PopularityViT
 
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
+REPO_ROOT = Path(__file__).resolve().parents[4]
 USER = os.environ["USER"]
 NETWORK_MEL_DIR = Path("/net/scc1/scratch") / USER / "mel_spectrograms"
 LOCAL_SCRATCH_DIR = Path("/scratch") / USER

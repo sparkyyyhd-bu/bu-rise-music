@@ -1,5 +1,5 @@
-job 6967190 started on scc-pa3 at Wed Jul 29 16:33:32 EDT 2026
-Requirement already satisfied: pip in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (26.1.2)
+job 6971899 started on scc-pd2 at Wed Jul 29 21:04:00 EDT 2026
+Requirement already satisfied: pip in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (26.2)
 Requirement already satisfied: setuptools in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (83.0.0)
 Requirement already satisfied: pandas in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from -r requirements.txt (line 1)) (2.3.3)
 Requirement already satisfied: requests in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from -r requirements.txt (line 2)) (2.34.2)
@@ -50,17 +50,17 @@ Requirement already satisfied: nvidia-cusparselt-cu13==0.8.1 in /project/rise-gr
 Requirement already satisfied: nvidia-nccl-cu13==2.29.7 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from torch->-r requirements.txt (line 5)) (2.29.7)
 Requirement already satisfied: nvidia-nvshmem-cu13==3.4.5 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from torch->-r requirements.txt (line 5)) (3.4.5)
 Requirement already satisfied: triton==3.7.1 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from torch->-r requirements.txt (line 5)) (3.7.1)
-Requirement already satisfied: nvidia-cufile==1.15.1.6.* in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (1.15.1.6)
-Requirement already satisfied: nvidia-cuda-nvrtc==13.0.88.* in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (13.0.88)
-Requirement already satisfied: nvidia-cufft==12.0.0.61.* in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (12.0.0.61)
-Requirement already satisfied: nvidia-nvjitlink<14,>=13.0.88 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (13.3.33)
 Requirement already satisfied: nvidia-curand==10.4.0.35.* in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (10.4.0.35)
-Requirement already satisfied: nvidia-nvtx==13.0.85.* in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (13.0.85)
+Requirement already satisfied: nvidia-cufile==1.15.1.6.* in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (1.15.1.6)
+Requirement already satisfied: nvidia-cuda-runtime==13.0.96.* in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (13.0.96)
 Requirement already satisfied: nvidia-cublas==13.1.1.3.* in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (13.1.1.3)
+Requirement already satisfied: nvidia-cuda-nvrtc==13.0.88.* in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (13.0.88)
 Requirement already satisfied: nvidia-cusolver==12.0.4.66.* in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (12.0.4.66)
 Requirement already satisfied: nvidia-cusparse==12.6.3.3.* in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (12.6.3.3)
+Requirement already satisfied: nvidia-nvjitlink<14,>=13.0.88 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (13.3.33)
+Requirement already satisfied: nvidia-nvtx==13.0.85.* in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (13.0.85)
+Requirement already satisfied: nvidia-cufft==12.0.0.61.* in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (12.0.0.61)
 Requirement already satisfied: nvidia-cuda-cupti==13.0.85.* in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (13.0.85)
-Requirement already satisfied: nvidia-cuda-runtime==13.0.96.* in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch->-r requirements.txt (line 5)) (13.0.96)
 Requirement already satisfied: cuda-pathfinder>=1.4.2 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from cuda-bindings<14,>=13.0.3->torch->-r requirements.txt (line 5)) (1.5.6)
 Requirement already satisfied: pillow!=8.3.*,>=5.3.0 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from torchvision->-r requirements.txt (line 6)) (12.3.0)
 Requirement already satisfied: lightning-utilities>=0.15.3 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from torchmetrics->-r requirements.txt (line 8)) (0.15.3)
@@ -75,20 +75,21 @@ Requirement already satisfied: MarkupSafe>=2.0 in /project/rise-grid/lucaslu/ven
 Requirement already satisfied: executing>=1.2.0 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from stack_data->ipython->-r requirements.txt (line 4)) (2.2.1)
 Requirement already satisfied: asttokens>=2.1.0 in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from stack_data->ipython->-r requirements.txt (line 4)) (3.0.2)
 Requirement already satisfied: pure-eval in /project/rise-grid/lucaslu/venvs/bu-rise-train/lib/python3.10/site-packages (from stack_data->ipython->-r requirements.txt (line 4)) (0.2.3)
-fixed artist/album-isolated split train=55591 (70.0%), validation=11913 (15.0%), test=11912 (15.0%), fingerprint=d808cf460ed3f1e2
-training three models on 55591 tracks
+fixed artist/album-isolated split train=71354 (70.0%), validation=15290 (15.0%), test=15290 (15.0%), fingerprint=b3be2a8229de75fa
+canonical ViT split: train=71354, validation=15290, test=15290
+training lyrics Random Forest on 57177 tracks; common comparison train=57177
 using the fixed ViT checkpoint's trained Linear + sigmoid head
 parameters: {'n_estimators': 500, 'min_samples_split': 2, 'min_samples_leaf': 2, 'max_features': 'sqrt', 'max_depth': 35, 'bootstrap': True}
-best blend: ViT=0.50, lyrics RF=0.50, validation RMSE=12.860
-ViT checkpoint train: MAE 11.015 | RMSE 13.881 | R2 0.416
-ViT checkpoint validation: MAE 11.049 | RMSE 13.879 | R2 0.070
-ViT checkpoint test: MAE 11.186 | RMSE 14.032 | R2 0.057
-lyrics Random Forest train: MAE 6.399 | RMSE 8.854 | R2 0.762
-lyrics Random Forest validation: MAE 10.736 | RMSE 13.864 | R2 0.072
-lyrics Random Forest test: MAE 10.618 | RMSE 13.757 | R2 0.094
-convex blend train: MAE 8.134 | RMSE 10.420 | R2 0.671
-convex blend validation: MAE 10.176 | RMSE 12.860 | R2 0.202
-convex blend test: MAE 10.196 | RMSE 12.886 | R2 0.205
+best blend: ViT=0.43, lyrics RF=0.57, validation RMSE=13.048
+ViT checkpoint train: MAE 10.884 | RMSE 13.722 | R2 0.423
+ViT checkpoint validation: MAE 11.462 | RMSE 14.364 | R2 0.015
+ViT checkpoint test: MAE 11.460 | RMSE 14.357 | R2 -0.003
+lyrics Random Forest train: MAE 6.444 | RMSE 8.896 | R2 0.757
+lyrics Random Forest validation: MAE 10.683 | RMSE 13.802 | R2 0.091
+lyrics Random Forest test: MAE 10.644 | RMSE 13.724 | R2 0.083
+convex blend train: MAE 7.770 | RMSE 10.019 | R2 0.692
+convex blend validation: MAE 10.338 | RMSE 13.048 | R2 0.187
+convex blend test: MAE 10.298 | RMSE 13.007 | R2 0.177
 saved model to /net/scc1/scratch/lucaslu/checkpoints/fixed_vit_lyrics_model_comparison.joblib
 saved metrics to /net/scc1/scratch/lucaslu/checkpoints/fixed_vit_lyrics_model_comparison.metrics.json
 saved blend weights to /net/scc1/scratch/lucaslu/checkpoints/fixed_vit_lyrics_model_comparison.blend_weights.csv

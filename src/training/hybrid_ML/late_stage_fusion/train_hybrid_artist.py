@@ -26,7 +26,7 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from xgboost import XGBRegressor
 
 from training.data_utils import grouped_track_id_split
-from training.hybrid_ML.train_all_embeddings_hybrid import (
+from training.hybrid_ML.intermediate_concatenation.train_intermediate_concatenation import (
     ARTISTS_CSV,
     CHECKPOINT_DIR,
     EMBEDDING_DIMENSIONS,
@@ -35,7 +35,7 @@ from training.hybrid_ML.train_all_embeddings_hybrid import (
     evaluate,
     load_embeddings,
 )
-from training.hybrid_ML.train_fixed_vit_lyrics_model_comparison import (
+from training.hybrid_ML.late_stage_fusion.train_hybrid_no_artist import (
     LYRIC_FEATURES,
     MODEL_PARAMETERS as LYRICS_RF_PARAMETERS,
     RF_RANDOM_SEED,
@@ -47,7 +47,13 @@ from training.hybrid_ML.train_fixed_vit_lyrics_model_comparison import (
 from sklearn.ensemble import RandomForestRegressor
 
 
-DEFAULT_OUTPUT = CHECKPOINT_DIR / "full_hybrid_prediction_blend.joblib"
+DEFAULT_OUTPUT = (
+    CHECKPOINT_DIR
+    / "hybrid"
+    / "late_stage_fusion"
+    / "artist"
+    / "hybrid_artist.joblib"
+)
 ARTIST_XGBOOST_PARAMETERS = {
     "n_estimators": 300,
     "learning_rate": 0.05,
@@ -377,7 +383,7 @@ def main():
         "vit_checkpoint_head": (vit_head, None),
         "lyrics_random_forest": (lyrics_model, LYRIC_FEATURES),
         "artist_xgboost": (artist_model, artist_features),
-        "full_hybrid_blend": (blend_model, None),
+        "hybrid_artist": (blend_model, None),
     }
     metrics = {}
     for model_name, (model, features) in predictors.items():

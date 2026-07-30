@@ -25,7 +25,7 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 from training.data_utils import grouped_track_id_split
-from training.hybrid_ML.train_all_embeddings_hybrid import (
+from training.hybrid_ML.intermediate_concatenation.train_intermediate_concatenation import (
     CHECKPOINT_DIR,
     EMBEDDING_DIMENSIONS,
     LYRICS_CSV,
@@ -37,7 +37,13 @@ from training.hybrid_ML.train_all_embeddings_hybrid import (
 )
 
 
-DEFAULT_OUTPUT = CHECKPOINT_DIR / "fixed_vit_lyrics_model_comparison.joblib"
+DEFAULT_OUTPUT = (
+    CHECKPOINT_DIR
+    / "hybrid"
+    / "late_stage_fusion"
+    / "no_artist"
+    / "hybrid_no_artist.joblib"
+)
 MODEL_PARAMETERS = {
     "n_estimators": 500,
     "min_samples_split": 2,
@@ -329,7 +335,9 @@ def main():
         lyric_features,
         best_blend["vit_weight"],
     )
-    fit_seconds["convex_blend_search"] = time.perf_counter() - started
+    fit_seconds["hybrid_no_artist_blend_search"] = (
+        time.perf_counter() - started
+    )
     print(
         f"best blend: ViT={best_blend['vit_weight']:.2f}, "
         f"lyrics RF={best_blend['lyrics_weight']:.2f}, "
@@ -355,7 +363,7 @@ def main():
             )
             for split in ("train", "validation", "test")
         },
-        "convex_blend": {
+        "hybrid_no_artist": {
             split: evaluate(
                 combined_model,
                 x[split],
