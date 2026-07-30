@@ -1,9 +1,13 @@
 """Compare lyrics RF, the trained ViT head, and a convex blend.
 
-The original fixed ViT checkpoint's trained Linear + sigmoid head reduces each
-cached ViT embedding to its popularity prediction. A single convex-blend weight
-is selected on validation RMSE and then evaluated once on the untouched test
-partition. All models use the same fixed population and splits.
+The fixed ViT embedding population defines the checkpoint's canonical
+artist/album-isolated split. The lyrics RF trains on every valid lyrics example
+in the canonical training partition; ViT and lyrics are intersected only
+within the fixed partitions for comparison and blending. The original fixed
+ViT checkpoint's trained Linear + sigmoid head reduces each cached ViT
+embedding to its popularity prediction. A single convex-blend weight is
+selected on validation RMSE and then evaluated once on the untouched test
+partition.
 """
 
 import argparse
@@ -201,7 +205,7 @@ def main():
     args = parse_args()
     np.random.seed(RANDOM_SEED)
 
-    embedding_path, _split_track_ids, embeddings, embedding_features = (
+    embedding_path, all_ids, embeddings, embedding_features = (
         load_embeddings(
             "ViT", EMBEDDING_DIMENSIONS["ViT"], "_fixed"
         )
@@ -211,19 +215,24 @@ def main():
 
     tabular = load_notebook_lyrics_features()
     lyric_features = LYRIC_FEATURES
+    train_ids, validation_ids, test_ids = grouped_track_id_split(all_ids)
+    canonical_ids = {
+        "train": set(train_ids),
+        "validation": set(validation_ids),
+        "test": set(test_ids),
+    }
+    lyrics_train = tabular.loc[
+        tabular["id"].isin(canonical_ids["train"])
+    ].set_index("id")
+    if lyrics_train.empty:
+        raise ValueError("no lyrics examples are available for training")
+
     combined = embeddings.merge(
         tabular, on="id", how="inner", validate="one_to_one"
     ).set_index("id")
-    train_ids, validation_ids, test_ids = grouped_track_id_split(
-        combined.index
-    )
     partitions = {
         name: combined.loc[combined.index.isin(ids)]
-        for name, ids in (
-            ("train", train_ids),
-            ("validation", validation_ids),
-            ("test", test_ids),
-        )
+        for name, ids in canonical_ids.items()
     }
     if any(frame.empty for frame in partitions.values()):
         raise ValueError("at least one fixed data partition is empty")
@@ -261,7 +270,18 @@ def main():
             random_state=RF_RANDOM_SEED,
         )
     )
-    print(f"training three models on {len(x['train'])} tracks", flush=True)
+    print(
+        "canonical ViT split: "
+        + ", ".join(
+            f"{name}={len(ids)}" for name, ids in canonical_ids.items()
+        ),
+        flush=True,
+    )
+    print(
+        f"training lyrics Random Forest on {len(lyrics_train)} tracks; "
+        f"common comparison train={len(x['train'])}",
+        flush=True,
+    )
     print(
         "using the fixed ViT checkpoint's trained Linear + sigmoid head",
         flush=True,
@@ -272,7 +292,7 @@ def main():
 
     started = time.perf_counter()
     lyrics_forest.fit(
-        x["train"][lyric_features], y["train"]
+        lyrics_train[lyric_features], lyrics_train["popularity"]
     )
     fit_seconds["lyrics_random_forest"] = time.perf_counter() - started
 
@@ -371,8 +391,15 @@ def main():
         "embedding_paths": embedding_paths,
         "modalities": ["ViT_fixed_embeddings", "lyrics"],
         "split": "artist_album_isolated_fixed_70_15_15",
+        "split_population": "fixed_vit_embedding_track_ids",
         "split_counts": {
             name: len(frame) for name, frame in partitions.items()
+        },
+        "canonical_split_counts": {
+            name: len(ids) for name, ids in canonical_ids.items()
+        },
+        "training_population_counts": {
+            "lyrics_random_forest": len(lyrics_train),
         },
         "random_seed": RANDOM_SEED,
     }
