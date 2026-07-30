@@ -1,10 +1,14 @@
 """Blend fixed ViT, notebook-style lyrics RF, and artist XGBoost predictions.
 
-All modalities are intersected before creating one artist/album-isolated split.
-The ViT prediction comes from the fixed checkpoint's trained Linear + sigmoid
-head. Lyrics and artist models reproduce popularity_predictor2.ipynb and
-artists_xgboost.ipynb respectively. Nonnegative blend weights summing to one
-are selected on validation RMSE and evaluated once on the untouched test set.
+The fixed ViT embedding population defines one canonical artist/album-isolated
+split, matching the population available to the fixed ViT checkpoint. Lyrics
+and artist models train on every example their modality has in the canonical
+training partition. Modalities are intersected only for blend selection and
+evaluation. The ViT prediction comes from the fixed checkpoint's trained
+Linear + sigmoid head. Lyrics and artist models reproduce
+popularity_predictor2.ipynb and artists_xgboost.ipynb respectively.
+Nonnegative blend weights summing to one are selected on validation RMSE and
+evaluated once on the untouched test set.
 """
 
 import argparse
@@ -208,11 +212,30 @@ def main():
     args = parse_args()
     np.random.seed(RANDOM_SEED)
 
-    embedding_path, _all_ids, embeddings, embedding_features = load_embeddings(
+    embedding_path, all_ids, embeddings, embedding_features = load_embeddings(
         "ViT", EMBEDDING_DIMENSIONS["ViT"], "_fixed"
     )
     lyrics = load_notebook_lyrics_features()
     artist, artist_features, top_genres = load_artist_notebook_features()
+
+    # Split before intersecting modalities. This preserves the fixed ViT
+    # checkpoint's evaluation boundary while allowing each tabular model to
+    # use all of its available canonical-training examples.
+    train_ids, validation_ids, test_ids = grouped_track_id_split(all_ids)
+    canonical_ids = {
+        "train": set(train_ids),
+        "validation": set(validation_ids),
+        "test": set(test_ids),
+    }
+    lyrics_train = lyrics.loc[
+        lyrics["id"].isin(canonical_ids["train"])
+    ].set_index("id")
+    artist_train = artist.loc[
+        artist["id"].isin(canonical_ids["train"])
+    ].set_index("id")
+    if lyrics_train.empty or artist_train.empty:
+        raise ValueError("at least one modality has no canonical training data")
+
     combined = (
         embeddings.merge(
             lyrics, on="id", how="inner", validate="one_to_one"
@@ -225,16 +248,9 @@ def main():
         )
         .set_index("id")
     )
-    train_ids, validation_ids, test_ids = grouped_track_id_split(
-        combined.index
-    )
     partitions = {
         name: combined.loc[combined.index.isin(ids)]
-        for name, ids in (
-            ("train", train_ids),
-            ("validation", validation_ids),
-            ("test", test_ids),
-        )
+        for name, ids in canonical_ids.items()
     }
     if any(frame.empty for frame in partitions.values()):
         raise ValueError("at least one full-hybrid partition is empty")
@@ -259,7 +275,19 @@ def main():
     artist_model = XGBRegressor(**ARTIST_XGBOOST_PARAMETERS)
 
     print(
-        "full hybrid population: "
+        "canonical ViT split: "
+        + ", ".join(
+            f"{name}={len(ids)}" for name, ids in canonical_ids.items()
+        ),
+        flush=True,
+    )
+    print(
+        "modality training population: "
+        f"lyrics={len(lyrics_train)}, artist={len(artist_train)}",
+        flush=True,
+    )
+    print(
+        "common blend population: "
         + ", ".join(
             f"{name}={len(frame)}" for name, frame in partitions.items()
         ),
@@ -273,7 +301,7 @@ def main():
     fit_seconds = {}
     started = time.perf_counter()
     lyrics_model.fit(
-        partitions["train"][LYRIC_FEATURES], y["train"]
+        lyrics_train[LYRIC_FEATURES], lyrics_train["popularity"]
     )
     fit_seconds["lyrics_random_forest"] = time.perf_counter() - started
     print(
@@ -283,7 +311,7 @@ def main():
     )
     started = time.perf_counter()
     artist_model.fit(
-        partitions["train"][artist_features], y["train"]
+        artist_train[artist_features], artist_train["popularity"]
     )
     fit_seconds["artist_xgboost"] = time.perf_counter() - started
     print(
@@ -373,8 +401,16 @@ def main():
         "metrics": metrics,
         "fit_seconds": fit_seconds,
         "split": "artist_album_isolated_fixed_70_15_15",
+        "split_population": "fixed_vit_embedding_track_ids",
         "split_counts": {
             name: len(frame) for name, frame in partitions.items()
+        },
+        "canonical_split_counts": {
+            name: len(ids) for name, ids in canonical_ids.items()
+        },
+        "training_population_counts": {
+            "lyrics_random_forest": len(lyrics_train),
+            "artist_xgboost": len(artist_train),
         },
         "embedding_path": str(embedding_path),
         "vit_checkpoint": str(VIT_CHECKPOINT),
