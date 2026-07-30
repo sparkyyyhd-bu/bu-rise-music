@@ -8,6 +8,7 @@ torchaudio
 torchmetrics
 tqdm
 scikit-learn
+scipy
 joblib
 xgboost
 langdetect
