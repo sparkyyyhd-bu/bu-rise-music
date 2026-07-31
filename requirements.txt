@@ -12,3 +12,4 @@ scipy
 joblib
 xgboost
 langdetect
+matplotlib

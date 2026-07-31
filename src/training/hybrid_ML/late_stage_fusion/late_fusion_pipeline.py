@@ -32,6 +32,9 @@ from training.hybrid_ML.intermediate_concatenation.train_intermediate_concatenat
     numeric_feature_frame,
     tree_pipeline,
 )
+from training.hybrid_ML.late_stage_fusion.generate_architecture_graph import (
+    render_architecture_graph,
+)
 
 
 NEURAL_HEADS = {
@@ -712,6 +715,13 @@ def main(include_artist):
             for name in predictor_names
         ]
     ).sort_values("weight", ascending=False).to_csv(weights_path, index=False)
+    architecture_path = args.output.with_suffix(".architecture.png")
+    render_architecture_graph(
+        weight_map,
+        architecture_path,
+        metrics[blend_name]["test"],
+    )
     print(f"saved model to {args.output}", flush=True)
     print(f"saved metrics to {metrics_path}", flush=True)
     print(f"saved blend weights to {weights_path}", flush=True)
+    print(f"saved architecture graph to {architecture_path}", flush=True)
